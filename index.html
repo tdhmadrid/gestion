@@ -646,6 +646,8 @@ td{padding:10px 12px;font-size:12px;vertical-align:middle;}
     <div id="loginError" class="login-error"></div>
     <button class="login-btn" id="loginBtn" onclick="doLogin()">Entrar</button>
     <p class="login-hint">La primera vez que uses un usuario se crea automáticamente.<br>El PIN no se puede recuperar — anótalo.</p>
+    <div id="loginDiagResult" style="font-size:10px;color:var(--text3);font-family:'IBM Plex Mono',monospace;word-break:break-all;line-height:1.5;max-height:80px;overflow-y:auto;display:none;padding:8px;background:var(--s3);border-radius:6px;margin-top:-8px;"></div>
+    <button onclick="runDiag()" style="background:transparent;border:1px solid var(--border2);color:var(--text3);border-radius:8px;padding:5px 10px;font-size:10px;cursor:pointer;font-family:'IBM Plex Mono',monospace;width:100%;">🔍 Probar conexión con Supabase</button>
   </div>
 </div>
 
@@ -1289,5 +1291,27 @@ td{padding:10px 12px;font-size:12px;vertical-align:middle;}
 <script>
   // Boot: init() is async — called after DOM ready
   document.addEventListener('DOMContentLoaded', () => init());
+
+  async function runDiag() {
+    const el = document.getElementById('loginDiagResult');
+    el.style.display = 'block';
+    el.textContent = 'Probando…';
+    try {
+      const url = 'https://kjvftqsscttnghmlfncj.supabase.co/rest/v1/user_data?select=user_id&limit=0';
+      const key = 'sb_publishable_iaQ06UGlROdlqqOm-Lo8wg_31AcM2GN';
+      const r = await fetch(url, { headers: { 'apikey': key, 'Authorization': 'Bearer ' + key } });
+      const body = await r.text();
+      if (r.ok) {
+        el.style.color = 'var(--green)';
+        el.textContent = '✓ Supabase responde OK (HTTP ' + r.status + '). Si los datos no cargan, verifica que la tabla exista.';
+      } else {
+        el.style.color = 'var(--red)';
+        el.textContent = '✗ HTTP ' + r.status + ': ' + body.slice(0, 200);
+      }
+    } catch(e) {
+      el.style.color = 'var(--red)';
+      el.textContent = '✗ No se pudo conectar: ' + e.message;
+    }
+  }
 </script>
 </html>

@@ -22,11 +22,13 @@ async function doLogin() {
   const pin   = document.getElementById('loginPin').value.trim();
 
   errEl.textContent = '';
-  if (!user) { errEl.textContent = 'Escribe un nombre de usuario'; return; }
-  if (!pin)  { errEl.textContent = 'Escribe tu PIN'; return; }
+  errEl.style.color = 'var(--gold)';
+  if (!user) { errEl.style.color='var(--red)'; errEl.textContent = 'Escribe un nombre de usuario'; return; }
+  if (!pin)  { errEl.style.color='var(--red)'; errEl.textContent = 'Escribe tu PIN'; return; }
 
   btn.disabled = true;
-  btn.textContent = 'Cargando…';
+  btn.textContent = 'Conectando…';
+  errEl.textContent = 'Verificando Supabase…';
 
   try {
     const data = await window.DB.dbLogin(user, pin);
@@ -34,8 +36,12 @@ async function doLogin() {
     hideLoginScreen(user);
     buildNav(); buildBizViews(); buildMpicker(); renderAll();
     window.DB.setSyncStatus('idle');
+    if (!data) showToast('Bienvenido ' + user + ' — cuenta nueva', 'ok');
+    else showToast('Bienvenido de nuevo, ' + user, 'ok');
   } catch(e) {
-    document.getElementById('loginError').textContent = 'Error al conectar: ' + e.message.slice(0, 50);
+    errEl.style.color = 'var(--red)';
+    errEl.textContent = e.message;
+    console.error('[doLogin]', e);
   } finally {
     btn.disabled = false;
     btn.textContent = 'Entrar';
