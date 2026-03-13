@@ -37,12 +37,28 @@ function clearSession() {
 }
 
 // ── Hash username+pin → userId determinístico ──────
-async function makeUserId(username, pin) {
-  const raw  = username.trim().toLowerCase() + ':' + String(pin).trim();
-  const enc  = new TextEncoder().encode(raw);
-  const buf  = await crypto.subtle.digest('SHA-256', enc);
-  const hex  = [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2,'0')).join('');
-  return 'u_' + hex.slice(0, 32);
+// Usa djb2 + sdbm combinados — funciona en HTTP y HTTPS, sin crypto.subtle
+function makeUserId(username, pin) {
+  const raw = username.trim().toLowerCase() + ':' + String(pin).trim();
+  let h1 = 5381, h2 = 0;
+  for (let i = 0; i < raw.length; i++) {
+    const c = raw.charCodeAt(i);
+    h1 = Math.imul(h1, 33) ^ c;
+    h2 = c + Math.imul(h2, 65599);
+  }
+  // Convertir a hex sin signo y rellenar
+  const p1 = (h1 >>> 0).toString(16).padStart(8, '0');
+  const p2 = (h2 >>> 0).toString(16).padStart(8, '0');
+  // Añadir más entropía con otro pase sobre la cadena al revés
+  let h3 = 0x811c9dc5, h4 = 0;
+  for (let i = raw.length - 1; i >= 0; i--) {
+    const c = raw.charCodeAt(i);
+    h3 = Math.imul(h3 ^ c, 0x01000193);
+    h4 = Math.imul(h4 + c, 0x9e3779b9);
+  }
+  const p3 = (h3 >>> 0).toString(16).padStart(8, '0');
+  const p4 = (h4 >>> 0).toString(16).padStart(8, '0');
+  return 'u_' + p1 + p2 + p3 + p4;  // 34 chars total, determinístico
 }
 
 // ── Sync status indicator ──────────────────────────
@@ -163,7 +179,7 @@ async function _doSync() {
 // ── Login ──────────────────────────────────────────
 // Retorna: { data, isNewUser, error }
 async function dbLogin(username, pin) {
-  const userId = await makeUserId(username, pin);
+  const userId = makeUserId(username, pin);
 
   // Test de conectividad
   const conn = await _testConnection();
