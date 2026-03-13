@@ -1,4 +1,47 @@
 
+
+// ════════════════════════════════════════════════════
+//  LOGIN UI
+// ════════════════════════════════════════════════════
+function showLoginScreen() {
+  const el = document.getElementById('loginScreen');
+  if (el) el.classList.remove('hidden');
+}
+
+function hideLoginScreen(username) {
+  const el = document.getElementById('loginScreen');
+  if (el) el.classList.add('hidden');
+  const badge = document.getElementById('userBadge');
+  if (badge && username) badge.textContent = '● ' + username;
+}
+
+async function doLogin() {
+  const btn   = document.getElementById('loginBtn');
+  const errEl = document.getElementById('loginError');
+  const user  = document.getElementById('loginUser').value.trim();
+  const pin   = document.getElementById('loginPin').value.trim();
+
+  errEl.textContent = '';
+  if (!user) { errEl.textContent = 'Escribe un nombre de usuario'; return; }
+  if (!pin)  { errEl.textContent = 'Escribe tu PIN'; return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Cargando…';
+
+  try {
+    const data = await window.DB.dbLogin(user, pin);
+    applyLoaded(data);
+    hideLoginScreen(user);
+    buildNav(); buildBizViews(); buildMpicker(); renderAll();
+    window.DB.setSyncStatus('idle');
+  } catch(e) {
+    document.getElementById('loginError').textContent = 'Error al conectar: ' + e.message.slice(0, 50);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Entrar';
+  }
+}
+
 // ════════════════════════════════════════════════════
 //  STATE & STORAGE
 // ════════════════════════════════════════════════════
@@ -102,8 +145,12 @@ function exportarDatos() {
     showToast('No hay datos guardados para exportar.', 'error');
     return;
   }
-  const fecha = new Date().toISOString().slice(0, 10);   // YYYY-MM-DD
-  const nombre = `backup-${APP_NAME}-${fecha}.json`;
+  const now    = new Date();
+  const fecha  = now.toISOString().slice(0, 10);   // YYYY-MM-DD
+  const hora   = now.toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'}).replace(':','-');
+  const sess   = window.DB ? window.DB.getSession() : null;
+  const userTag = sess ? '-' + sess.username.toLowerCase().replace(/[^a-z0-9]/g,'') : '';
+  const nombre = `backup-${APP_NAME}${userTag}-${fecha}-${hora}.json`;
   const blob = new Blob([JSON.stringify(snapshot, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
@@ -2849,10 +2896,19 @@ function renderAll(){
 // ════════════════════════════════════════════════════
 async function init(){
   loadTheme();
-  // Async load: Supabase first, fallback localStorage
+
+  // ── Auth gate ──────────────────────────────────
   if (window.DB) {
+    const sess = window.DB.getSession();
+    if (!sess) {
+      // No session → show login screen, stop init here
+      showLoginScreen();
+      return;
+    }
+    // Session exists → load data from Supabase/localStorage
     const data = await window.DB.dbLoad();
     applyLoaded(data);
+    hideLoginScreen(sess.username);
   } else {
     load();
   }

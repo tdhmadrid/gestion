@@ -600,6 +600,26 @@ td{padding:10px 12px;font-size:12px;vertical-align:middle;}
 .growth-dn{background:#ff6b6b15;color:var(--red);}
 .growth-eq{background:var(--s3);color:var(--text3);}
 
+
+/* ── Login screen ── */
+#loginScreen{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:0;}
+#loginScreen.hidden{display:none;}
+.login-card{background:var(--s1);border:1px solid var(--border2);border-radius:20px;padding:40px 44px 36px;width:100%;max-width:380px;display:flex;flex-direction:column;gap:20px;box-shadow:0 24px 64px rgba(0,0,0,.5);}
+.login-logo{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:var(--text);letter-spacing:-.5px;}
+.login-logo small{display:block;font-size:11px;font-weight:400;color:var(--text3);font-family:'IBM Plex Sans',sans-serif;margin-top:3px;letter-spacing:.3px;}
+.login-field{display:flex;flex-direction:column;gap:6px;}
+.login-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text3);font-family:'IBM Plex Mono',monospace;}
+.login-input{background:var(--s2);border:1px solid var(--border2);border-radius:10px;padding:11px 14px;color:var(--text);font-size:14px;font-family:'IBM Plex Sans',sans-serif;outline:none;transition:border-color .15s;}
+.login-input:focus{border-color:var(--gold);}
+.login-btn{background:var(--gold);color:#0c0e11;border:none;border-radius:10px;padding:12px;font-size:13px;font-weight:700;cursor:pointer;font-family:'IBM Plex Sans',sans-serif;transition:opacity .15s;margin-top:4px;}
+.login-btn:hover{opacity:.85;}
+.login-btn:disabled{opacity:.4;cursor:not-allowed;}
+.login-hint{font-size:10px;color:var(--text3);text-align:center;font-family:'IBM Plex Mono',monospace;line-height:1.6;}
+.login-error{font-size:11px;color:var(--red);text-align:center;font-family:'IBM Plex Mono',monospace;min-height:16px;}
+/* ── Logout button ── */
+.logout-btn{background:transparent;border:1px solid var(--border2);color:var(--text3);border-radius:8px;padding:5px 10px;font-size:10px;cursor:pointer;font-family:'IBM Plex Mono',monospace;width:100%;text-align:left;transition:all .15s;margin-top:2px;}
+.logout-btn:hover{border-color:var(--red);color:var(--red);}
+.user-badge{font-size:10px;color:var(--text3);font-family:'IBM Plex Mono',monospace;padding:4px 2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 </style>
 <script src="db.js"></script>
 
@@ -608,6 +628,27 @@ td{padding:10px 12px;font-size:12px;vertical-align:middle;}
 <div class="app">
 
 <!-- ═══ SIDEBAR ═══ -->
+<!-- ══ LOGIN SCREEN ══ -->
+<div id="loginScreen">
+  <div class="login-card">
+    <div>
+      <div class="login-logo">Operaciones<small>Panel de Negocios</small></div>
+    </div>
+    <div class="login-field">
+      <label class="login-label" for="loginUser">Usuario</label>
+      <input class="login-input" id="loginUser" type="text" placeholder="Tu nombre de usuario" autocomplete="username" spellcheck="false">
+    </div>
+    <div class="login-field">
+      <label class="login-label" for="loginPin">PIN</label>
+      <input class="login-input" id="loginPin" type="password" placeholder="••••" maxlength="20" autocomplete="current-password"
+        onkeydown="if(event.key==='Enter') doLogin()">
+    </div>
+    <div id="loginError" class="login-error"></div>
+    <button class="login-btn" id="loginBtn" onclick="doLogin()">Entrar</button>
+    <p class="login-hint">La primera vez que uses un usuario se crea automáticamente.<br>El PIN no se puede recuperar — anótalo.</p>
+  </div>
+</div>
+
 <aside>
   <div class="aside-logo">Operaciones<small>Panel de Negocios</small></div>
   <div class="nav-group">
@@ -636,7 +677,7 @@ td{padding:10px 12px;font-size:12px;vertical-align:middle;}
       <span class="nav-dot" style="background:var(--text3)"></span>Tipos de Operación
     </div>
   </div>
-  <div class="aside-footer"><div id="syncStatus" style="padding:4px 0 6px;min-height:18px;"></div>
+  <div class="aside-footer"><div id="userBadge" class="user-badge"></div><div id="syncStatus" style="padding:2px 0 4px;min-height:16px;"></div>
     <button class="add-biz-btn" onclick="openAddBiz()">＋ Nuevo negocio</button>
     <div class="theme-toggle">
       <span>☀ Modo</span>
@@ -654,6 +695,7 @@ td{padding:10px 12px;font-size:12px;vertical-align:middle;}
       <button class="add-biz-btn" onclick="document.getElementById('importFile').click()" title="Restaura desde un archivo backup" style="text-align:left;padding:7px 10px;">↑ Restaurar copia de seguridad</button>
       <input type="file" id="importFile" accept=".json" style="display:none" onchange="importarDatos(event)">
     </div>
+    <button class="logout-btn" onclick="DB.dbLogout()">⏻ Cerrar sesión</button>
   </div>
 </aside>
 
