@@ -1,0 +1,9 @@
+/*
+  Cache-Control: no-cache
+  X-Content-Type-Options: nosniff
+
+/db.js
+  Cache-Control: no-store
+
+/app.js
+  Cache-Control: max-age=3600

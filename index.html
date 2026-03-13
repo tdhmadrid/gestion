@@ -1,0 +1,1251 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Operaciones — Panel de Negocios</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+
+/* ══════════════════════════════════════════
+   THEMES
+══════════════════════════════════════════ */
+:root {
+  --transition: background .2s, color .2s, border-color .2s;
+}
+[data-theme="dark"] {
+  --bg:      #0c0e11;
+  --s1:      #131720;
+  --s2:      #1a2030;
+  --s3:      #212840;
+  --border:  #252d42;
+  --border2: #2e3850;
+  --text:    #dde2f0;
+  --text2:   #7a86a8;
+  --text3:   #404a65;
+  --shadow:  0 8px 32px rgba(0,0,0,.5);
+  --gold:    #f0c040;
+  --green:   #4debb0;
+  --red:     #ff6b6b;
+  --blue:    #5ba3ff;
+  --purple:  #a78bfa;
+  --orange:  #fb923c;
+}
+[data-theme="light"] {
+  --bg:      #f0f2f8;
+  --s1:      #ffffff;
+  --s2:      #f4f6fb;
+  --s3:      #e8ecf5;
+  --border:  #dde2ee;
+  --border2: #c8cedf;
+  --text:    #1a2040;
+  --text2:   #5a6480;
+  --text3:   #9aa0b8;
+  --shadow:  0 4px 20px rgba(0,0,0,.08);
+  --gold:    #d4952a;
+  --green:   #1a9e6e;
+  --red:     #d94040;
+  --blue:    #2a6fcc;
+  --purple:  #7c5cbf;
+  --orange:  #c8620a;
+}
+
+/* ══════════════════════════════════════════
+   BASE
+══════════════════════════════════════════ */
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;transition:var(--transition);}
+.app{display:flex;min-height:100vh;}
+
+/* ══════════════════════════════════════════
+   SIDEBAR
+══════════════════════════════════════════ */
+aside{
+  width:224px;flex-shrink:0;background:var(--s1);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto;
+  transition:var(--transition);
+}
+.aside-logo{
+  padding:20px 18px 14px;border-bottom:1px solid var(--border);
+  font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:var(--gold);
+}
+.aside-logo small{display:block;font-family:'IBM Plex Sans',sans-serif;font-size:10px;color:var(--text3);font-weight:400;margin-top:2px;letter-spacing:.3px;}
+.nav-group{padding:14px 0 0;}
+.nav-label{font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--text3);padding:0 14px 6px;}
+.nav-item{
+  display:flex;align-items:center;gap:8px;padding:9px 14px;cursor:pointer;
+  font-size:13px;color:var(--text2);border-left:2px solid transparent;transition:all .12s;user-select:none;
+}
+.nav-item:hover{background:var(--s2);color:var(--text);}
+.nav-item.active{background:var(--s2);color:var(--text);border-left-color:var(--gold);}
+.nav-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.aside-footer{margin-top:auto;padding:12px 14px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:8px;}
+.add-biz-btn{
+  width:100%;background:transparent;border:1px dashed var(--border2);color:var(--text3);
+  padding:8px 10px;border-radius:8px;font-size:12px;cursor:pointer;
+  font-family:'IBM Plex Sans',sans-serif;transition:all .15s;
+}
+.add-biz-btn:hover{border-color:var(--gold);color:var(--gold);}
+.theme-toggle{
+  display:flex;align-items:center;justify-content:space-between;
+  font-size:11px;color:var(--text3);
+}
+.toggle-track{
+  width:36px;height:20px;border-radius:10px;background:var(--border2);
+  position:relative;cursor:pointer;transition:background .2s;
+}
+[data-theme="light"] .toggle-track{background:var(--gold);}
+.toggle-knob{
+  position:absolute;top:3px;left:3px;width:14px;height:14px;border-radius:50%;
+  background:#fff;transition:transform .2s;
+}
+[data-theme="light"] .toggle-knob{transform:translateX(16px);}
+
+/* ══════════════════════════════════════════
+   MAIN
+══════════════════════════════════════════ */
+main{flex:1;padding:28px 32px;overflow-x:hidden;min-width:0;}
+.view{display:none;}
+.view.active{display:block;}
+
+/* ══════════════════════════════════════════
+   PAGE HEADER
+══════════════════════════════════════════ */
+.ph{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px;gap:12px;flex-wrap:wrap;}
+.ph h1{font-family:'Syne',sans-serif;font-size:24px;font-weight:800;line-height:1;}
+.ph p{font-size:12px;color:var(--text2);margin-top:4px;}
+.ph-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+
+/* ══════════════════════════════════════════
+   STATS
+══════════════════════════════════════════ */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:20px;}
+.stat{background:var(--s1);border:1px solid var(--border);border-radius:12px;padding:16px;position:relative;overflow:hidden;transition:var(--transition);}
+.stat::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
+.stat.g::after{background:var(--green);}
+.stat.r::after{background:var(--red);}
+.stat.o::after{background:var(--gold);}
+.stat.b::after{background:var(--blue);}
+.stat.p::after{background:var(--purple);}
+.stat-lbl{font-size:9px;letter-spacing:1.2px;text-transform:uppercase;color:var(--text3);font-weight:700;margin-bottom:5px;}
+.stat-val{font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:500;}
+.stat-sub{font-size:10px;color:var(--text3);margin-top:3px;}
+
+/* ══════════════════════════════════════════
+   CARD
+══════════════════════════════════════════ */
+.card{background:var(--s1);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:16px;transition:var(--transition);}
+.card-head{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;}
+.card-title{font-size:13px;font-weight:700;font-family:'Syne',sans-serif;}
+
+/* ══════════════════════════════════════════
+   TABLE
+══════════════════════════════════════════ */
+table{width:100%;border-collapse:collapse;}
+thead th{padding:8px 12px;text-align:left;font-size:9px;letter-spacing:1.2px;text-transform:uppercase;color:var(--text3);font-weight:700;background:var(--s2);white-space:nowrap;}
+tbody tr{border-top:1px solid var(--border);transition:background .1s;}
+tbody tr:hover{background:var(--s2);}
+td{padding:10px 12px;font-size:12px;vertical-align:middle;}
+.mono{font-family:'IBM Plex Mono',monospace;font-size:11px;}
+.c-green{color:var(--green);}
+.c-red{color:var(--red);}
+.c-gold{color:var(--gold);}
+.c-blue{color:var(--blue);}
+.c-dim{color:var(--text3);}
+.c-text2{color:var(--text2);}
+.empty td{text-align:center;color:var(--text3);padding:32px;font-size:12px;}
+
+/* ══════════════════════════════════════════
+   BADGES
+══════════════════════════════════════════ */
+.badge{display:inline-flex;align-items:center;padding:2px 7px;border-radius:20px;font-size:9px;font-weight:700;letter-spacing:.5px;white-space:nowrap;}
+.badge-envio{background:rgba(91,163,255,.12);color:var(--blue);}
+.badge-cambio{background:rgba(167,139,250,.12);color:var(--purple);}
+.badge-comision{background:rgba(240,192,64,.12);color:var(--gold);}
+.badge-deposito{background:rgba(77,235,176,.12);color:var(--green);}
+.badge-gasto{background:rgba(255,107,107,.12);color:var(--red);}
+.badge-misc{background:rgba(251,146,60,.12);color:var(--orange);}
+.badge-transferencia{background:rgba(34,211,238,.12);color:#22d3ee;}
+.badge-cripto{background:rgba(247,147,26,.15);color:#f7931a;}
+
+/* ══════════════════════════════════════════
+   BUTTONS
+══════════════════════════════════════════ */
+.btn{background:var(--gold);color:#0c0e11;border:none;border-radius:8px;padding:7px 14px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif;transition:opacity .15s;white-space:nowrap;}
+.btn:hover{opacity:.82;}
+.btn-ghost{background:transparent;color:var(--text2);border:1px solid var(--border2);border-radius:8px;padding:6px 12px;font-size:11px;cursor:pointer;font-family:'IBM Plex Sans',sans-serif;transition:all .15s;white-space:nowrap;}
+.btn-ghost:hover{border-color:var(--text);color:var(--text);}
+.btn-outline{background:transparent;color:var(--gold);border:1px solid var(--gold);border-radius:8px;padding:6px 12px;font-size:11px;cursor:pointer;font-family:'IBM Plex Sans',sans-serif;transition:all .15s;white-space:nowrap;font-weight:600;}
+.btn-outline:hover{background:var(--gold);color:#0c0e11;}
+.btn-danger{background:transparent;color:var(--red);border:1px solid var(--red);border-radius:8px;padding:6px 12px;font-size:11px;cursor:pointer;transition:all .15s;}
+.btn-danger:hover{background:var(--red);color:#fff;}
+.del{background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;padding:2px 4px;border-radius:3px;transition:color .1s;}
+.del:hover{color:var(--red);}
+.sel{background:var(--s2);border:1px solid var(--border);border-radius:7px;padding:6px 9px;color:var(--text);font-size:11px;font-family:'IBM Plex Sans',sans-serif;outline:none;cursor:pointer;transition:var(--transition);}
+.sel:focus{border-color:var(--gold);}
+.sel option{background:var(--s1);}
+
+/* ══════════════════════════════════════════
+   DONUT CHARTS
+══════════════════════════════════════════ */
+.charts-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:16px;}
+.donut-card{background:var(--s1);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center;transition:var(--transition);}
+.donut-title{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px;}
+.donut-wrap{position:relative;width:120px;height:120px;margin:0 auto 12px;}
+.donut-wrap svg{transform:rotate(-90deg);}
+.donut-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;}
+.donut-center .dv{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:500;line-height:1;}
+.donut-center .dl{font-size:9px;color:var(--text3);margin-top:2px;}
+.donut-legend{display:flex;flex-direction:column;gap:5px;}
+.dl-item{display:flex;align-items:center;justify-content:space-between;font-size:10px;}
+.dl-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0;margin-right:5px;}
+.dl-name{color:var(--text2);flex:1;text-align:left;}
+.dl-val{font-family:'IBM Plex Mono',monospace;color:var(--text);}
+
+/* ══════════════════════════════════════════
+   BIZ OVERVIEW CARDS
+══════════════════════════════════════════ */
+.biz-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;margin-bottom:16px;}
+.biz-card{background:var(--s1);border:1px solid var(--border);border-radius:12px;padding:16px;border-top:3px solid;cursor:pointer;transition:transform .15s,box-shadow .15s;}
+.biz-card:hover{transform:translateY(-2px);box-shadow:var(--shadow);}
+.bc-name{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;margin-bottom:2px;}
+.bc-type{font-size:10px;color:var(--text3);margin-bottom:12px;}
+.bc-row{display:flex;justify-content:space-between;margin-bottom:5px;font-size:11px;}
+.bc-key{color:var(--text2);}
+.bc-val{font-family:'IBM Plex Mono',monospace;}
+
+/* ══════════════════════════════════════════
+   COMPARATIVA
+══════════════════════════════════════════ */
+.cmp-selectors{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:center;}
+.cmp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:16px;}
+.cmp-card{background:var(--s1);border:1px solid var(--border);border-radius:12px;padding:16px;border-top:4px solid;}
+.cmp-name{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;margin-bottom:10px;}
+.cmp-metric{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:11px;}
+.cmp-metric:last-child{border-bottom:none;}
+.cmp-metric .lbl{color:var(--text2);}
+.cmp-metric .val{font-family:'IBM Plex Mono',monospace;font-weight:500;}
+.bar-compare{margin-bottom:16px;}
+.bc-bar-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+.bc-bar-label{width:110px;font-size:11px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex-shrink:0;}
+.bc-bar-track{flex:1;background:var(--s2);border-radius:3px;height:16px;overflow:hidden;}
+.bc-bar-fill{height:100%;border-radius:3px;display:flex;align-items:center;padding-left:6px;min-width:2px;transition:width .6s ease;}
+.bc-bar-fill span{font-family:'IBM Plex Mono',monospace;font-size:9px;color:rgba(0,0,0,.65);white-space:nowrap;}
+
+/* ══════════════════════════════════════════
+   PDF REPORT MODAL
+══════════════════════════════════════════ */
+.pdf-options{display:flex;flex-direction:column;gap:14px;}
+.pdf-row{display:flex;gap:8px;flex-wrap:wrap;}
+.period-btn{
+  padding:7px 14px;border-radius:7px;font-size:11px;font-weight:600;cursor:pointer;
+  border:1px solid var(--border2);color:var(--text2);background:transparent;transition:all .12s;font-family:'IBM Plex Sans',sans-serif;
+}
+.period-btn.active{background:var(--gold);color:#0c0e11;border-color:var(--gold);}
+.biz-check-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;max-height:200px;overflow-y:auto;}
+.biz-check{display:flex;align-items:center;gap:7px;font-size:12px;cursor:pointer;padding:5px 8px;border-radius:6px;border:1px solid var(--border);transition:all .1s;}
+.biz-check:hover{border-color:var(--border2);}
+.biz-check.sel{border-color:var(--gold);}
+.biz-check input{accent-color:var(--gold);}
+
+/* ══════════════════════════════════════════
+   MODAL
+══════════════════════════════════════════ */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:400;align-items:center;justify-content:center;}
+.overlay.open{display:flex;}
+.modal{background:var(--s1);border:1px solid var(--border2);border-radius:16px;padding:24px;width:500px;max-width:96vw;max-height:90vh;overflow-y:auto;transition:var(--transition);}
+.modal h2{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;margin-bottom:18px;color:var(--gold);}
+.fg{display:flex;flex-direction:column;gap:4px;margin-bottom:11px;}
+.fg label{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;}
+.fg input,.fg select,.fg textarea{background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:8px 10px;color:var(--text);font-size:12px;font-family:'IBM Plex Sans',sans-serif;outline:none;transition:var(--transition);}
+.fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--gold);}
+.fg select option{background:var(--s1);}
+.fg-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:18px;}
+.cond-fields{display:none;}
+.cond-fields.visible{display:block;}
+.cond-sub{background:var(--s2);border:1px solid var(--border);border-radius:9px;padding:12px;margin-top:3px;}
+.cond-sub-title{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text3);margin-bottom:9px;}
+.calc-preview{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px;margin-top:6px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;}
+.cp-item{text-align:center;}
+.cp-lbl{font-size:8px;text-transform:uppercase;letter-spacing:1px;color:var(--text3);font-weight:700;margin-bottom:2px;}
+.cp-val{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:500;}
+/* type-chips removed — using select */
+.cpicker{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;}
+.cswatch{width:24px;height:24px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:border-color .1s,transform .1s;}
+.cswatch.sel{border-color:var(--text);transform:scale(1.2);}
+.info-small{font-size:10px;color:var(--text3);margin-top:3px;}
+
+/* ══════════════════════════════════════════
+   TOOLBAR / DATA MGMT
+══════════════════════════════════════════ */
+.toolbar{display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin-bottom:20px;padding:12px 14px;background:var(--s1);border:1px solid var(--border);border-radius:10px;}
+.toolbar-label{font-size:10px;color:var(--text3);font-weight:700;letter-spacing:.5px;text-transform:uppercase;}
+
+/* ══════════════════════════════════════════
+   PRINT / PDF
+══════════════════════════════════════════ */
+#printArea{display:none;}
+@media print{
+  @page{margin:14mm 12mm;}
+  body>*{display:none!important;}
+  #printArea{display:block!important;}
+  svg{overflow:visible;}
+  -webkit-print-color-adjust:exact!important;
+  print-color-adjust:exact!important;
+  color-adjust:exact!important;
+}
+/* Shared screen+print styles for printArea */
+#printArea{
+  font-family:'IBM Plex Sans',sans-serif;
+  color:#1a1f30;background:#fff;
+}
+#printArea *{box-sizing:border-box;}
+/* Cover header */
+#printArea .rpt-cover{
+  background:linear-gradient(135deg,#0f1525 0%,#1a2448 60%,#1e2d5a 100%);
+  color:#fff;padding:28px 32px 22px;border-radius:14px;margin-bottom:20px;
+  display:flex;justify-content:space-between;align-items:flex-end;
+}
+#printArea .rpt-cover-title{font-size:26px;font-weight:800;letter-spacing:-.5px;margin:0 0 4px;}
+#printArea .rpt-cover-sub{font-size:11px;color:rgba(255,255,255,.6);margin:0;}
+#printArea .rpt-cover-period{text-align:right;}
+#printArea .rpt-cover-period-label{font-size:10px;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:1px;}
+#printArea .rpt-cover-period-val{font-size:14px;font-weight:700;color:#f0c040;}
+/* KPI cards row */
+#printArea .pr-kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:20px;}
+#printArea .pr-kpi{border-radius:10px;padding:12px 14px;border-left:4px solid transparent;}
+#printArea .pr-kpi-lbl{font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:1px;opacity:.7;margin-bottom:4px;}
+#printArea .pr-kpi-val{font-family:'IBM Plex Mono',monospace;font-size:18px;font-weight:600;line-height:1;}
+#printArea .pr-kpi-sub{font-size:9px;opacity:.6;margin-top:3px;}
+/* Section header */
+#printArea .rpt-section-title{
+  font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;
+  color:#5a6480;padding:6px 0 6px;border-bottom:2px solid #e8ecf5;margin:20px 0 12px;
+}
+/* Charts row */
+#printArea .rpt-charts-row{display:flex;gap:14px;margin-bottom:20px;align-items:flex-start;}
+#printArea .rpt-chart-card{flex:1;border:1px solid #e8ecf5;border-radius:10px;padding:14px;background:#fafbff;}
+#printArea .rpt-chart-title{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#7a86a8;margin-bottom:10px;}
+/* Biz section */
+#printArea .pr-biz-section{margin-bottom:20px;page-break-inside:avoid;border:1px solid #e8ecf5;border-radius:12px;overflow:hidden;}
+#printArea .pr-biz-header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid #e8ecf5;}
+#printArea .pr-biz-name{font-size:14px;font-weight:800;margin:0;}
+#printArea .pr-biz-type{font-size:10px;color:#9aa0b8;margin-top:1px;}
+#printArea .pr-biz-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-bottom:1px solid #e8ecf5;}
+#printArea .pr-biz-kpi{padding:10px 14px;border-right:1px solid #f0f2f8;}
+#printArea .pr-biz-kpi:last-child{border-right:none;}
+#printArea .pr-biz-kpi-lbl{font-size:8px;text-transform:uppercase;letter-spacing:.8px;color:#9aa0b8;margin-bottom:2px;}
+#printArea .pr-biz-kpi-val{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;}
+/* Table */
+#printArea table{width:100%;border-collapse:collapse;font-size:9.5px;}
+#printArea thead tr{background:#f4f6fb;}
+#printArea th{padding:6px 10px;text-align:left;font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#7a86a8;}
+#printArea td{padding:6px 10px;border-bottom:1px solid #f0f2f8;color:#2a3050;}
+#printArea tr:last-child td{border-bottom:none;}
+#printArea .pr-badge{display:inline-block;padding:1px 7px;border-radius:10px;font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;}
+/* Month bar chart */
+#printArea .rpt-bar-row{display:flex;align-items:center;gap:6px;margin-bottom:4px;}
+#printArea .rpt-bar-lbl{font-size:9px;color:#7a86a8;width:28px;text-align:right;flex-shrink:0;}
+#printArea .rpt-bar-track{flex:1;height:12px;background:#f0f2f8;border-radius:6px;overflow:hidden;}
+#printArea .rpt-bar-fill{height:100%;border-radius:6px;transition:width .3s;}
+#printArea .rpt-bar-val{font-size:8px;font-family:'IBM Plex Mono',monospace;color:#5a6480;width:60px;text-align:right;flex-shrink:0;}
+/* Donut legend */
+#printArea .dl-row{display:flex;align-items:center;gap:6px;margin-bottom:4px;font-size:9px;}
+#printArea .dl-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+#printArea .dl-name{flex:1;color:#5a6480;}
+#printArea .dl-val{font-family:'IBM Plex Mono',monospace;color:#2a3050;font-weight:600;}
+/* Footer */
+#printArea .pr-footer{margin-top:24px;text-align:center;font-size:9px;color:#9aa0b8;border-top:1px solid #e8ecf5;padding-top:10px;}
+/* Comparativa table */
+#printArea .cmp-badge{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:middle;}
+
+/* ══════════════════════════════════════════
+   RESPONSIVE
+══════════════════════════════════════════ */
+/* ── Biz nav actions ── */
+/* Year summary card */
+.year-card{background:var(--s1);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:0;}
+.year-card-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px 10px;border-bottom:1px solid var(--border);}
+.year-card-title{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--gold);letter-spacing:.3px;}
+.year-card-sub{font-size:10px;color:var(--text3);}
+.year-biz-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;padding:14px 18px;}
+.year-biz-item{background:var(--s2);border-radius:8px;padding:10px 12px;border-left:3px solid transparent;}
+.year-biz-name{font-size:11px;font-weight:600;margin-bottom:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.year-biz-row{display:flex;justify-content:space-between;font-size:10px;margin-top:2px;}
+.year-biz-lbl{color:var(--text3);}
+.year-biz-val{font-family:'IBM Plex Mono',monospace;}
+.year-totals{display:grid;grid-template-columns:repeat(5,1fr);gap:0;border-top:1px solid var(--border);}
+.year-total-item{padding:12px 16px;text-align:center;border-right:1px solid var(--border);}
+.year-total-item:last-child{border-right:none;}
+.year-total-lbl{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;}
+.year-total-val{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:500;}
+.nav-item{position:relative;}
+.nav-item-actions{
+  display:none;position:absolute;right:6px;top:50%;transform:translateY(-50%);
+  gap:2px;align-items:center;
+}
+.nav-item:hover .nav-item-actions{display:flex;}
+.nav-act{background:none;border:none;cursor:pointer;font-size:11px;padding:2px 4px;
+  border-radius:3px;color:var(--text3);transition:color .1s,background .1s;}
+.nav-act:hover{background:var(--s3);color:var(--text);}
+.nav-act.hide-act:hover{color:var(--gold);}
+.nav-act.edit-act:hover{color:var(--blue);}
+.nav-item.biz-hidden{opacity:.4;}
+.nav-item.biz-hidden .nav-dot{opacity:.4;}
+/* ── Year summary in month nav ── */
+.year-summary-row{
+  padding:6px 10px 4px;
+  border-top:1px solid var(--border);margin-top:4px;
+}
+.year-summary-label{
+  font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1.5px;
+  text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:4px;
+}
+.year-summary-stats{display:flex;flex-direction:column;gap:2px;}
+.year-summary-stat{display:flex;justify-content:space-between;font-size:10px;}
+.year-summary-stat .lbl{color:var(--text3);}
+.year-summary-stat .val{font-family:'IBM Plex Mono',monospace;color:var(--text2);}
+.year-summary-stat .val.pos{color:var(--green);}
+.year-summary-stat .val.neg{color:var(--red);}
+/* ── Op type select ── */
+#opTypeSelect{
+  width:100%;background:var(--bg);border:1px solid var(--border);border-radius:7px;
+  padding:8px 10px;color:var(--text);font-size:12px;font-family:'IBM Plex Sans',sans-serif;
+  outline:none;transition:var(--transition);cursor:pointer;
+}
+#opTypeSelect:focus{border-color:var(--gold);}
+#opTypeSelect option{background:var(--s1);}
+.month-selector{
+  display:flex;align-items:center;justify-content:space-between;
+  border-top:1px solid var(--border);margin-top:10px;padding-top:10px;
+}
+.month-selector-label{
+  font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;
+  color:var(--text2);text-align:center;flex:1;letter-spacing:.8px;
+  text-transform:uppercase;
+}
+.month-btn{
+  background:none;border:none;cursor:pointer;color:var(--gold);
+  font-size:20px;padding:0 4px;line-height:1;transition:opacity .15s;
+}
+.month-btn:hover{opacity:.65;}
+.month-all-btn{
+  display:block;width:100%;margin-top:5px;background:none;border:none;
+  font-family:'IBM Plex Sans',sans-serif;font-size:10px;color:var(--text3);
+  cursor:pointer;text-align:center;padding:2px 0;transition:color .12s;
+}
+.month-all-btn:hover{color:var(--gold);}
+.month-all-btn.dim{opacity:.5;}
+@media(max-width:768px){
+  aside{display:none;}
+  main{padding:14px 10px;}
+  .stats{grid-template-columns:1fr 1fr;}
+  .charts-row{grid-template-columns:1fr 1fr;}
+}
+
+/* ── Month multi-picker ── */
+.mpicker-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:18px;padding:14px 16px;background:var(--s1);border:1px solid var(--border);border-radius:12px;}
+.mpicker-label{font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);flex-shrink:0;white-space:nowrap;}
+.mpicker-chips{display:flex;gap:5px;flex-wrap:wrap;flex:1;}
+.mchip{padding:4px 10px;border-radius:20px;font-size:11px;font-family:'IBM Plex Mono',monospace;cursor:pointer;border:1px solid var(--border2);color:var(--text2);background:transparent;transition:all .12s;white-space:nowrap;user-select:none;}
+.mchip:hover{border-color:var(--gold);color:var(--gold);}
+.mchip.active{background:var(--gold);color:#0c0e11;border-color:var(--gold);font-weight:700;}
+.mpicker-actions{display:flex;gap:4px;flex-shrink:0;}
+.mpick-btn{padding:4px 9px;border-radius:6px;font-size:10px;cursor:pointer;border:1px solid var(--border2);color:var(--text3);background:transparent;font-family:'IBM Plex Sans',sans-serif;transition:all .12s;white-space:nowrap;}
+.mpick-btn:hover{border-color:var(--text2);color:var(--text);}
+.mpick-selected-label{font-size:11px;color:var(--text2);flex-shrink:0;white-space:nowrap;font-family:'IBM Plex Mono',monospace;}
+
+/* ── Clients Module ── */
+.badge-cripto{background:rgba(247,147,26,.15);color:#f7931a;}
+.client-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-bottom:16px;}
+.client-card{background:var(--s1);border:1px solid var(--border);border-radius:12px;padding:16px;cursor:pointer;transition:transform .15s,box-shadow .15s;position:relative;}
+.client-card:hover{transform:translateY(-2px);box-shadow:var(--shadow);}
+.client-card-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;}
+.client-avatar{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:800;font-size:16px;flex-shrink:0;}
+.client-name{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;line-height:1.1;}
+.client-biz{font-size:10px;color:var(--text3);margin-top:2px;}
+.client-conds{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;}
+.cond-tag{padding:2px 8px;border-radius:12px;font-size:10px;font-family:'IBM Plex Mono',monospace;background:var(--s2);border:1px solid var(--border);color:var(--text2);}
+.client-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);}
+.cstat{text-align:center;}
+.cstat-lbl{font-size:8px;text-transform:uppercase;letter-spacing:1px;color:var(--text3);font-weight:700;margin-bottom:2px;}
+.cstat-val{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:500;}
+.client-card-actions{position:absolute;top:10px;right:10px;display:flex;gap:4px;opacity:0;transition:opacity .12s;}
+.client-card:hover .client-card-actions{opacity:1;}
+/* Client modal */
+.cond-section{background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:12px;margin-top:4px;}
+.cond-section-title{font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text3);margin-bottom:10px;}
+.cond-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px;}
+.cond-row:last-child{margin-bottom:0;}
+/* Client selector in op modal */
+.client-sel-row{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--s2);border:1px solid var(--border);border-radius:8px;margin-bottom:10px;}
+.client-sel-lbl{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.7px;flex-shrink:0;}
+.client-sel-badge{padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;transition:all .12s;}
+/* Client history view */
+.client-hist-filter{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px;}
+.nav-sub-item{
+  display:flex;align-items:center;gap:6px;padding:6px 14px 6px 28px;cursor:pointer;
+  font-size:11px;color:var(--text3);border-left:2px solid transparent;transition:all .12s;
+}
+.nav-sub-item:hover{background:var(--s2);color:var(--text2);}
+.nav-sub-item.active{color:var(--text);border-left-color:var(--gold);}
+.nav-sub-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+
+/* ── Biz per-negocio month picker ── */
+.biz-mpicker{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:10px 14px 10px;background:var(--s2);border-bottom:1px solid var(--border);}
+.biz-mpicker-chips{display:flex;gap:4px;flex-wrap:wrap;flex:1;min-width:0;}
+.bmchip{padding:3px 8px;border-radius:16px;font-size:10px;font-family:'IBM Plex Mono',monospace;cursor:pointer;border:1px solid var(--border2);color:var(--text3);background:transparent;transition:all .11s;white-space:nowrap;user-select:none;line-height:1.4;}
+.bmchip:hover{border-color:var(--gold);color:var(--gold);}
+.bmchip.active{background:var(--gold);color:#0c0e11;border-color:var(--gold);font-weight:700;}
+.bmchip.year-btn{font-weight:700;font-size:9px;padding:3px 7px;letter-spacing:.3px;}
+.biz-mpicker-label{font-size:10px;font-family:'IBM Plex Mono',monospace;color:var(--gold);white-space:nowrap;flex-shrink:0;}
+.biz-mpicker-actions{display:flex;gap:3px;flex-shrink:0;}
+.bmpick-btn{padding:3px 7px;border-radius:5px;font-size:9px;cursor:pointer;border:1px solid var(--border2);color:var(--text3);background:transparent;font-family:'IBM Plex Sans',sans-serif;transition:all .11s;white-space:nowrap;}
+.bmpick-btn:hover{border-color:var(--gold);color:var(--gold);}
+
+/* ── Op Types Config ── */
+.optype-row{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:9px;border:1px solid var(--border);margin-bottom:6px;background:var(--s1);transition:background .12s;}
+.optype-row:hover{background:var(--s2);}
+.optype-drag{cursor:grab;color:var(--text3);font-size:14px;flex-shrink:0;}
+.optype-badge-preview{padding:2px 10px;border-radius:12px;font-size:10px;font-weight:700;flex-shrink:0;min-width:70px;text-align:center;}
+.optype-label{flex:1;font-size:12px;font-weight:600;}
+.optype-scope{font-size:10px;color:var(--text3);flex-shrink:0;}
+.optype-actions{display:flex;gap:4px;flex-shrink:0;}
+.optype-toggle{width:32px;height:18px;border-radius:9px;background:var(--border2);border:none;cursor:pointer;position:relative;transition:background .15s;flex-shrink:0;}
+.optype-toggle.on{background:var(--green);}
+.optype-toggle::after{content:'';position:absolute;width:14px;height:14px;border-radius:50%;background:#fff;top:2px;left:2px;transition:left .15s;}
+.optype-toggle.on::after{left:16px;}
+/* Config view */
+.cfg-section{background:var(--s1);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px;}
+.cfg-section-title{font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);margin-bottom:12px;}
+.scope-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+.scope-chip{padding:3px 10px;border-radius:16px;font-size:10px;font-family:'IBM Plex Mono',monospace;cursor:pointer;border:1px solid var(--border2);color:var(--text2);background:transparent;transition:all .11s;}
+.scope-chip:hover{border-color:var(--gold);}
+.scope-chip.active{background:var(--gold)22;border-color:var(--gold);color:var(--gold);font-weight:700;}
+
+/* ── Drag & Drop ── */
+.draggable{cursor:grab;position:relative;}
+.draggable:active{cursor:grabbing;}
+.draggable.drag-over{
+  outline:2px dashed var(--gold);
+  outline-offset:3px;
+  background:var(--gold)10;
+  border-radius:12px;
+}
+.draggable.dragging{
+  opacity:.35;
+  transform:scale(.97);
+  transition:none;
+}
+.drag-handle{
+  position:absolute;top:6px;right:7px;
+  font-size:11px;color:var(--text3);
+  opacity:0;transition:opacity .12s;
+  cursor:grab;line-height:1;
+  pointer-events:none;
+}
+.draggable:hover .drag-handle{opacity:.55;}
+.stat{position:relative;}
+.biz-card{position:relative;}
+.client-card{position:relative;}
+
+/* ═══ Monthly utilidad chart ═══ */
+.mu-wrap{padding:22px 24px 26px;}
+.mu-header{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:20px;}
+.mu-title{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);}
+.mu-sub{font-size:10px;color:var(--text3);margin-top:2px;}
+.mu-year-sep{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:2.5px;color:var(--text3);
+  padding:5px 0 8px;border-bottom:1px solid var(--border);margin-bottom:14px;}
+.mu-grid{display:flex;flex-direction:column;gap:8px;margin-bottom:20px;}
+.mu-row{display:grid;grid-template-columns:48px 1fr 88px 82px;align-items:center;gap:12px;}
+.mu-label{font-size:11px;font-weight:700;text-align:right;}
+.mu-track{height:24px;background:var(--s3);border-radius:8px;overflow:hidden;}
+.mu-bar{height:100%;border-radius:8px;position:relative;transition:width .5s cubic-bezier(.4,0,.2,1);min-width:6px;}
+.mu-bar::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,rgba(255,255,255,.12),rgba(255,255,255,0));border-radius:8px;}
+.mu-amount{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;text-align:right;white-space:nowrap;}
+.mu-delta{display:inline-flex;align-items:center;gap:3px;font-size:9px;font-weight:700;
+  font-family:'IBM Plex Mono',monospace;padding:3px 8px;border-radius:10px;white-space:nowrap;justify-content:flex-end;}
+.mu-delta-up{background:#4debb015;color:var(--green);}
+.mu-delta-dn{background:#ff6b6b15;color:var(--red);}
+.mu-delta-neutral{background:var(--s3);color:var(--text3);}
+
+/* ── Comparativa view tabs ── */
+.cmp-nav{display:flex;gap:2px;background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:4px;margin-bottom:20px;width:fit-content;}
+.cmp-nav-btn{padding:7px 20px;border-radius:9px;border:none;background:transparent;color:var(--text2);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap;font-family:'IBM Plex Sans',sans-serif;}
+.cmp-nav-btn.active{background:var(--s1);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.18);border:1px solid var(--border2);}
+.cmp-nav-btn:hover:not(.active){color:var(--text);background:var(--s3);}
+/* ── Collapse year chip ── */
+.mchip-year{font-weight:700;font-size:10px;display:inline-flex;align-items:center;gap:4px;padding:4px 10px;cursor:pointer;border-radius:6px;border:1px solid var(--border2);background:var(--s2);color:var(--text2);font-family:'IBM Plex Mono',monospace;transition:all .12s;}
+.mchip-year.active{background:var(--gold);border-color:var(--gold);color:#0c0e11;}
+.mchip-year .yr-arrow{font-size:8px;transition:transform .2s;display:inline-block;}
+.mchip-year.open .yr-arrow{transform:rotate(90deg);}
+.mchip-months-group{display:inline-flex;gap:4px;flex-wrap:wrap;overflow:hidden;max-height:0;max-width:0;opacity:0;transition:max-height .25s ease,opacity .2s ease,max-width .3s ease;vertical-align:middle;}
+.mchip-months-group.open{max-height:80px;max-width:600px;opacity:1;}
+/* ── Comparativa content cards ── */
+.cmp-period-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;margin-bottom:20px;}
+.cmp-period-card{background:var(--s1);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
+.cmp-period-header{padding:14px 18px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;}
+.cmp-period-title{font-size:13px;font-weight:700;}
+.cmp-period-sub{font-size:10px;color:var(--text3);margin-top:1px;}
+.cmp-period-body{padding:12px 18px 14px;display:flex;flex-direction:column;gap:0;}
+.cmp-period-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);gap:12px;}
+.cmp-period-row:last-child{border-bottom:none;}
+.cmp-period-lbl{color:var(--text3);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;}
+.cmp-period-vals{display:flex;align-items:center;gap:8px;}
+.cmp-bar-chart-wrap{background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:18px 20px;margin-bottom:16px;}
+/* ── Growth badges ── */
+.growth-badge{display:inline-flex;align-items:center;gap:2px;font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;font-family:'IBM Plex Mono',monospace;white-space:nowrap;}
+.growth-up{background:#4debb015;color:var(--green);}
+.growth-dn{background:#ff6b6b15;color:var(--red);}
+.growth-eq{background:var(--s3);color:var(--text3);}
+
+</style>
+<script src="db.js"></script>
+
+</head>
+<body>
+<div class="app">
+
+<!-- ═══ SIDEBAR ═══ -->
+<aside>
+  <div class="aside-logo">Operaciones<small>Panel de Negocios</small></div>
+  <div class="nav-group">
+    <div class="nav-label">General</div>
+    <div class="nav-item active" data-view="resumen" onclick="showView('resumen',this)">
+      <span class="nav-dot" style="background:var(--gold)"></span>Vista General
+    </div>
+    <div class="nav-item" data-view="comparativa" onclick="showView('comparativa',this)">
+      <span class="nav-dot" style="background:var(--purple)"></span>Comparativa
+    </div>
+  </div>
+  <div class="nav-group">
+    <div class="nav-label">Mis Negocios</div>
+    <div id="navBizItems"></div>
+  </div>
+  <div class="nav-group">
+    <div class="nav-label">Clientes</div>
+    <div class="nav-item" data-view="clientes" onclick="showView('clientes',this)">
+      <span class="nav-dot" style="background:var(--blue)"></span>Todos los Clientes
+    </div>
+    <div id="navClientItems"></div>
+  </div>
+  <div class="nav-group">
+    <div class="nav-label">Configuración</div>
+    <div class="nav-item" data-view="config_optypes" onclick="showView('config_optypes',this);renderOpTypesConfig()">
+      <span class="nav-dot" style="background:var(--text3)"></span>Tipos de Operación
+    </div>
+  </div>
+  <div class="aside-footer"><div id="syncStatus" style="padding:4px 0 6px;min-height:18px;"></div>
+    <button class="add-biz-btn" onclick="openAddBiz()">＋ Nuevo negocio</button>
+    <div class="theme-toggle">
+      <span>☀ Modo</span>
+      <div class="toggle-track" onclick="toggleTheme()"><div class="toggle-knob"></div></div>
+    </div>
+    <div class="month-selector">
+      <button class="month-btn" onclick="changeMonth(-1)" title="Mes anterior">‹</button>
+      <span class="month-selector-label" id="monthLabel">— — —</span>
+      <button class="month-btn" onclick="changeMonth(1)" title="Mes siguiente">›</button>
+    </div>
+    <button class="month-all-btn" id="monthAllBtn" onclick="setAllMonths()">Ver todos los meses</button>
+    <div id="yearSummaryPanel" style="display:none"></div>
+    <div style="border-top:1px solid var(--border);margin-top:8px;padding-top:10px;display:flex;flex-direction:column;gap:6px;">
+      <button class="add-biz-btn" onclick="exportarDatos()" title="Descarga un backup completo" style="text-align:left;padding:7px 10px;">↓ Guardar copia de seguridad</button>
+      <button class="add-biz-btn" onclick="document.getElementById('importFile').click()" title="Restaura desde un archivo backup" style="text-align:left;padding:7px 10px;">↑ Restaurar copia de seguridad</button>
+      <input type="file" id="importFile" accept=".json" style="display:none" onchange="importarDatos(event)">
+    </div>
+  </div>
+</aside>
+
+<!-- ═══ MAIN ═══ -->
+<main>
+
+  <!-- ══ VISTA GENERAL ══ -->
+  <div class="view active" id="view-resumen">
+    <div class="ph">
+      <div><h1>Vista General</h1><p id="resSubtitle">Todos los negocios consolidados</p></div>
+      <div class="ph-right">
+        <button class="btn-outline" onclick="openPdfModal()">⬇ Reporte PDF</button>
+      </div>
+    </div>
+    <!-- Month multi-picker -->
+    <div class="mpicker-bar" id="mpickerBar">
+      <span class="mpicker-label">Período</span>
+      <div class="mpicker-chips" id="mpickerChips"></div>
+      <div class="mpicker-actions">
+        <button class="mpick-btn" onclick="mpickAll()">Año actual</button>
+        <button class="mpick-btn" onclick="mpickNone()">Limpiar</button>
+      </div>
+      <span class="mpick-selected-label" id="mpickLabel"></span>
+    </div>
+
+    <!-- Toolbar datos -->
+    <div class="toolbar">
+      <span class="toolbar-label">Datos:</span>
+      <button class="btn-danger" onclick="resetData()">✕ Reiniciar todos los datos</button>
+    </div>
+    <!-- Toast de notificación (nueva funcionalidad) -->
+    <div id="toastMsg" style="display:none;position:fixed;bottom:28px;right:28px;z-index:9999;background:var(--s1);border:1px solid var(--border2);border-radius:10px;padding:12px 18px;font-size:13px;box-shadow:var(--shadow);display:none;align-items:center;gap:10px;max-width:340px;transition:opacity .3s;">
+      <span id="toastIcon" style="font-size:16px"></span>
+      <span id="toastText"></span>
+    </div>
+
+    <div class="stats" id="resStats"></div>
+    <div class="charts-row" id="resCharts"></div>
+    <div class="biz-grid" id="resBizCards"></div>
+    <div class="card" id="resBarCard"></div>
+    <div id="resYearCard"></div>
+    <div class="card">
+      <div class="card-head">
+        <span class="card-title">Todas las Operaciones</span>
+        <select class="sel" id="resTipoFilter" onchange="renderResumen()">
+          <option value="">Todos los tipos</option>
+          <option value="envio">Envío</option>
+          <option value="cambio">Cambio divisas</option>
+          <option value="transferencia">Transferencia</option>
+          <option value="comision">Comisión</option>
+          <option value="deposito">Depósito/Ingreso</option>
+          <option value="cripto">Cripto</option>
+          <option value="gasto">Gasto</option>
+          <option value="misc">Misceláneo</option>
+        </select>
+      </div>
+      <table><thead><tr><th>Fecha</th><th>Negocio</th><th>Descripción</th><th>Tipo</th><th>Cobrado</th><th>Comisión</th><th>Ganancia</th></tr></thead>
+      <tbody id="resAllOps"></tbody></table>
+    </div>
+  </div>
+
+  <!-- ══ CLIENTES ══ -->
+  <div class="view" id="view-clientes">
+    <div class="ph">
+      <div><h1>Clientes</h1><p id="clientesSubtitle">Directorio de clientes por negocio</p></div>
+      <div class="ph-right">
+        <select class="sel" id="clientBizFilter" onchange="renderClientes()">
+          <option value="">Todos los negocios</option>
+        </select>
+        <button class="btn" onclick="openAddClient()">＋ Nuevo cliente</button>
+      </div>
+    </div>
+    <div class="mpicker-bar" style="margin-bottom:12px;">
+      <span class="mpicker-label">Período</span>
+      <div id="clientGridPeriodChips" style="display:flex;gap:4px;flex-wrap:wrap;flex:1;align-items:center;"></div>
+      <span id="clientGridPeriodLabel" style="font-size:10px;font-family:'IBM Plex Mono',monospace;color:var(--gold);white-space:nowrap;flex-shrink:0;"></span>
+    </div>
+    <div class="client-grid" id="clientGrid"></div>
+    <div id="clientNoData" style="display:none;text-align:center;padding:48px 0;color:var(--text3);font-size:13px;">
+      Sin clientes registrados. Crea el primero con el botón de arriba.
+    </div>
+  </div>
+
+  <!-- ══ CLIENTE INDIVIDUAL ══ -->
+  <div class="view" id="view-client_detail">
+    <div class="ph">
+      <div>
+        <h1 id="clientDetailName" style="font-family:'Syne',sans-serif;font-size:24px;font-weight:800;"></h1>
+        <p id="clientDetailSub" style="font-size:12px;color:var(--text2);margin-top:4px;"></p>
+      </div>
+      <div class="ph-right">
+        <button class="btn-ghost" onclick="showView('clientes',document.querySelector('[data-view=clientes]'))">← Todos los clientes</button>
+        <button class="btn-outline" id="clientDetailEditBtn" onclick="editCurrentClient()">✎ Editar cliente</button>
+        <button class="btn" id="clientDetailOpBtn" onclick="openOpModalForClient()">＋ Operación</button>
+      </div>
+    </div>
+    <div class="stats" id="clientDetailStats"></div>
+    <div class="cond-section" id="clientDetailConds" style="margin-bottom:16px;"></div>
+    <div class="card">
+      <div class="card-head">
+        <span class="card-title">Historial de Operaciones</span>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <div id="clientDetailPeriodChips" style="display:flex;gap:4px;flex-wrap:wrap;align-items:center;"></div>
+          <select class="sel" id="clientHistTipo" onchange="renderClientDetail()">
+            <option value="">Todos los tipos</option>
+            <option value="envio">Envío</option>
+            <option value="cambio">Cambio</option>
+            <option value="cripto">Cripto</option>
+            <option value="transferencia">Transferencia</option>
+            <option value="comision">Comisión</option>
+            <option value="misc">Misc</option>
+            <option value="gasto">Gasto</option>
+          </select>
+        </div>
+      </div>
+      <table><thead id="clientHistHead"></thead><tbody id="clientHistBody"></tbody></table>
+    </div>
+  </div>
+
+  <!-- ══ COMPARATIVA ══ -->
+  <div class="view" id="view-comparativa">
+    <div class="ph">
+      <div><h1>Comparativa</h1><p>Análisis mes a mes, año a año con % de crecimiento</p></div>
+      <div class="ph-right" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+        <span style="font-size:10px;color:var(--text3);font-weight:600;white-space:nowrap;">Período:</span>
+        <div id="cmpPeriodChips" style="display:flex;gap:4px;flex-wrap:wrap;align-items:center;max-width:520px;"></div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:6px;">
+      <div class="cmp-nav" id="cmpPeriodTabs">
+        <button class="cmp-nav-btn active" onclick="setCmpTab('resumen',this)">Resumen</button>
+        <button class="cmp-nav-btn" onclick="setCmpTab('mes',this)">Mes a mes</button>
+        <button class="cmp-nav-btn" onclick="setCmpTab('año',this)">Año a año</button>
+      </div>
+    </div>
+    <div class="cmp-selectors">
+      <span style="font-size:11px;color:var(--text2);font-weight:600">Comparar:</span>
+      <div id="cmpBizButtons"></div>
+    </div>
+    <div id="cmpTabContent">
+      <div id="cmpTabResumen">
+        <div class="cmp-grid" id="cmpCards"></div>
+        <div class="card" id="cmpBarSection"></div>
+        <div class="card" id="cmpTableSection"></div>
+      </div>
+      <div id="cmpTabMes" style="display:none">
+        <div id="cmpMesContent"></div>
+      </div>
+      <div id="cmpTabAño" style="display:none">
+        <div id="cmpAñoContent"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ CONFIGURACIÓN: TIPOS DE OPERACIÓN ══ -->
+  <div class="view" id="view-config_optypes">
+    <div class="ph">
+      <div><h1>Tipos de Operación</h1><p>Define qué tipos están disponibles, por negocio y por cliente</p></div>
+      <div class="ph-right">
+        <button class="btn" onclick="openAddOpType()">＋ Nuevo tipo</button>
+      </div>
+    </div>
+    <div class="cfg-section">
+      <div class="cfg-section-title">Tipos activos</div>
+      <div id="opTypesList"></div>
+    </div>
+    <div class="cfg-section" id="cfgDisabledSection" style="display:none">
+      <div class="cfg-section-title">Tipos deshabilitados globalmente</div>
+      <div id="opTypesDisabledList"></div>
+    </div>
+  </div>
+
+  <!-- ══ BIZ VIEWS ══ -->
+  <div id="bizViewsContainer"></div>
+
+</main>
+</div>
+
+<!-- ══════════ PRINT AREA ══════════ -->
+<div id="printArea"></div>
+
+<!-- ═══ MODAL: NUEVA OPERACIÓN ═══ -->
+<div class="overlay" id="opModal">
+<div class="modal">
+  <h2 id="opModalTitle">Nueva Operación</h2>
+  <input type="hidden" id="opEditId" value="">
+  <!-- Client selector -->
+  <div class="client-sel-row" id="opClientRow">
+    <span class="client-sel-lbl">Cliente</span>
+    <select id="opClientSel" class="sel" style="flex:1;border:none;background:transparent;padding:2px 4px;" onchange="populateOpTypeSelect(curBizId);applyClientConds()">
+      <option value="">Sin cliente / Ocasional</option>
+    </select>
+    <span id="opClientBadge" style="font-size:10px;color:var(--text3);"></span>
+  </div>
+
+  <div class="fg">
+    <label>Tipo de Operación</label>
+    <select id="opTypeSelect" onchange="setOpType(this.value)">
+      <option value="envio">Envío</option>
+      <option value="cambio">Cambio divisas</option>
+      <option value="comision">Comisión</option>
+      <option value="deposito">Depósito / Ingreso</option>
+      <option value="gasto">Gasto</option>
+      <option value="misc">Misceláneo</option>
+      <option value="transferencia">Transferencia</option>
+      <option value="cripto">Cripto (USDT/BTC/ETH)</option>
+    </select>
+  </div>
+  <div class="fg-row">
+    <div class="fg"><label>Fecha</label><input type="date" id="opDate"></div>
+    <div class="fg"><label>Referencia / Cliente</label><input type="text" id="opRef" placeholder="Nombre, orden…"></div>
+  </div>
+  <div class="fg"><label>Descripción</label><input type="text" id="opDesc" placeholder="Describe la operación"></div>
+
+  <!-- ENVÍO -->
+  <div class="cond-fields" id="cf-envio"><div class="cond-sub">
+    <div class="cond-sub-title">Datos del Envío</div>
+    <div class="fg-row">
+      <div class="fg"><label>Cobrado al cliente</label><input type="number" id="envCob" placeholder="0.00" oninput="calcEnvio()"></div>
+      <div class="fg"><label>% Comisión</label><input type="number" id="envPct" placeholder="ej. 2" step="0.01" oninput="calcEnvio()"></div>
+    </div>
+    <div class="fg-row">
+      <div class="fg"><label>Enviado real (retorno)</label><input type="number" id="envEnv" placeholder="Auto" oninput="calcEnvio()"></div>
+      <div class="fg"><label>Moneda</label><select id="envMon"><option>MXN</option><option>USD</option><option>EUR</option><option>USDT</option><option>USDC</option><option>BTC</option><option>ETH</option><option>PEN</option><option>COP</option><option>GTQ</option><option>BRL</option><option>TTD</option></select></div>
+    </div>
+    <div class="fg-row">
+      <div class="fg"><label>Destino</label><input type="text" id="envDest" placeholder="ej. Perú, Colombia"></div>
+      <div class="fg"><label>% Reparto socio</label><input type="number" id="envSoc" placeholder="0 = sin reparto" step="0.01" oninput="calcEnvio()"></div>
+    </div>
+    <div class="calc-preview">
+      <div class="cp-item"><div class="cp-lbl">Comisión $</div><div class="cp-val c-gold" id="cpEnvC">—</div></div>
+      <div class="cp-item"><div class="cp-lbl">Retorno</div><div class="cp-val c-blue" id="cpEnvR">—</div></div>
+      <div class="cp-item"><div class="cp-lbl">Ganancia</div><div class="cp-val c-green" id="cpEnvG">—</div></div>
+    </div>
+  </div></div>
+
+  <!-- CAMBIO -->
+  <div class="cond-fields" id="cf-cambio"><div class="cond-sub">
+    <div class="cond-sub-title">Cambio de Divisas</div>
+    <div class="fg-row">
+      <div class="fg"><label>Cobrado (moneda origen)</label><input type="number" id="camCob" placeholder="0.00" oninput="calcCambio()"></div>
+      <div class="fg"><label>Depositado</label><input type="number" id="camDep" placeholder="0.00" oninput="calcCambio()"></div>
+    </div>
+    <div class="fg-row">
+      <div class="fg"><label>% Com. Total cobrada</label><input type="number" id="camCT" placeholder="ej. 6" step="0.01" oninput="calcCambio()"></div>
+      <div class="fg"><label>% Com. Utilidad (tu parte)</label><input type="number" id="camCU" placeholder="ej. 1.25" step="0.01" oninput="calcCambio()"></div>
+    </div>
+    <div class="fg-row">
+      <div class="fg"><label>Moneda</label><select id="camMon"><option>MXN</option><option>USD</option><option>EUR</option><option>USDT</option><option>USDC</option><option>BTC</option><option>ETH</option></select></div>
+      <div class="fg"><label>Banco / Canal</label><input type="text" id="camBanco" placeholder="ej. BBVA Pink"></div>
+    </div>
+    <div class="calc-preview">
+      <div class="cp-item"><div class="cp-lbl">Costo %</div><div class="cp-val c-red" id="cpCamCst">—</div></div>
+      <div class="cp-item"><div class="cp-lbl">Comisión $</div><div class="cp-val c-gold" id="cpCamC">—</div></div>
+      <div class="cp-item"><div class="cp-lbl">Utilidad $</div><div class="cp-val c-green" id="cpCamU">—</div></div>
+    </div>
+  </div></div>
+
+  <!-- COMISIÓN -->
+  <div class="cond-fields" id="cf-comision"><div class="cond-sub">
+    <div class="cond-sub-title">Comisión / Ingreso periódico</div>
+    <div class="fg-row">
+      <div class="fg"><label>Monto</label><input type="number" id="comMto" placeholder="0.00"></div>
+      <div class="fg"><label>Moneda</label><select id="comMon"><option>MXN</option><option>USD</option><option>EUR</option><option>USDT</option><option>USDC</option><option>BTC</option><option>ETH</option></select></div>
+    </div>
+    <div class="fg-row">
+      <div class="fg"><label>Período</label><input type="text" id="comPer" placeholder="ej. Semana 4, 24-30 marzo"></div>
+      <div class="fg"><label>Fecha de pago</label><input type="date" id="comFP"></div>
+    </div>
+  </div></div>
+
+  <!-- DEPÓSITO -->
+  <div class="cond-fields" id="cf-deposito"><div class="cond-sub">
+    <div class="cond-sub-title">Depósito / Ingreso</div>
+    <div class="fg-row">
+      <div class="fg"><label>Monto</label><input type="number" id="depMto" placeholder="0.00"></div>
+      <div class="fg"><label>Moneda</label><select id="depMon"><option>MXN</option><option>USD</option><option>EUR</option><option>USDT</option><option>USDC</option><option>BTC</option><option>ETH</option></select></div>
+    </div>
+    <div class="fg"><label>Origen / Concepto</label><input type="text" id="depOrig" placeholder="ej. Cliente, empresa…"></div>
+  </div></div>
+
+  <!-- GASTO -->
+  <div class="cond-fields" id="cf-gasto"><div class="cond-sub">
+    <div class="cond-sub-title">Gasto / Egreso</div>
+    <div class="fg-row">
+      <div class="fg"><label>Monto</label><input type="number" id="gastoMto" placeholder="0.00"></div>
+      <div class="fg"><label>Moneda</label><select id="gastoMon"><option>MXN</option><option>USD</option><option>EUR</option><option>USDT</option><option>USDC</option><option>BTC</option><option>ETH</option></select></div>
+    </div>
+    <div class="fg"><label>Categoría</label>
+      <select id="gastoCat">
+        <option>Quincenas / Nómina</option><option>Banco / Comisión bancaria</option>
+        <option>Renta</option><option>Plataforma / Software</option>
+        <option>Transporte</option><option>Comida / Representación</option>
+        <option>Empresa / Legal</option><option>Otro</option>
+      </select>
+    </div>
+  </div></div>
+
+  <!-- MISC -->
+  <div class="cond-fields" id="cf-misc"><div class="cond-sub">
+    <div class="cond-sub-title">Operación Miscelánea</div>
+    <div class="fg-row">
+      <div class="fg"><label>Cobrado / Monto</label><input type="number" id="misCob" placeholder="0.00" oninput="calcMisc()"></div>
+      <div class="fg"><label>% Comisión</label><input type="number" id="misPct" placeholder="ej. 1" step="0.01" oninput="calcMisc()"></div>
+    </div>
+    <div class="fg-row">
+      <div class="fg"><label>Moneda</label><select id="misMon"><option>MXN</option><option>USD</option><option>EUR</option><option>USDT</option><option>USDC</option><option>BTC</option><option>ETH</option></select></div>
+      <div class="fg"><label>Tipo</label>
+        <select id="misTipo"><option>Efectivo</option><option>Depósito</option><option>Factura</option><option>Quincenas</option><option>Venta cuenta</option><option>Empresa</option><option>Otro</option></select>
+      </div>
+    </div>
+    <div class="fg"><label>Socio / Parte</label><input type="text" id="misSocio" placeholder="ej. Fidel, Ubaldo…"></div>
+    <div class="calc-preview">
+      <div class="cp-item"><div class="cp-lbl">Comisión $</div><div class="cp-val c-gold" id="cpMisC">—</div></div>
+      <div class="cp-item"><div class="cp-lbl">Tu parte (60%)</div><div class="cp-val c-green" id="cpMisJT">—</div></div>
+      <div class="cp-item"><div class="cp-lbl">Retorno</div><div class="cp-val c-blue" id="cpMisR">—</div></div>
+    </div>
+  </div></div>
+
+  <!-- TRANSFERENCIA -->
+  <div class="cond-fields" id="cf-transferencia"><div class="cond-sub">
+    <div class="cond-sub-title">Transferencia</div>
+    <div class="fg-row">
+      <div class="fg"><label>Monto depositado por cliente</label><input type="number" id="trfMonto" placeholder="0.00" oninput="calcTransferencia()"></div>
+      <div class="fg"><label>Moneda</label><select id="trfMon"><option>MXN</option><option>USD</option><option>EUR</option><option>USDT</option><option>USDC</option><option>BTC</option><option>ETH</option><option>PEN</option><option>COP</option><option>GTQ</option><option>BRL</option><option>TTD</option></select></div>
+    </div>
+    <div class="fg-row">
+      <div class="fg"><label>% Comisión cobrada al cliente</label><input type="number" id="trfComPct" placeholder="ej. 3" step="0.01" oninput="calcTransferencia()"></div>
+      <div class="fg"><label>% Comisión para mí (mi ganancia)</label><input type="number" id="trfMioPct" placeholder="ej. 1.5" step="0.01" oninput="calcTransferencia()"></div>
+    </div>
+    <div class="fg"><label>Canal / Destino</label><input type="text" id="trfCanal" placeholder="ej. Transfersapp, PERU INT…"></div>
+    <div class="calc-preview" style="grid-template-columns:1fr 1fr 1fr 1fr">
+      <div class="cp-item"><div class="cp-lbl">Com. cliente $</div><div class="cp-val c-gold" id="cpTrfCC">—</div></div>
+      <div class="cp-item"><div class="cp-lbl">Mi ganancia $</div><div class="cp-val c-green" id="cpTrfMia">—</div></div>
+      <div class="cp-item"><div class="cp-lbl">Monto neto</div><div class="cp-val c-blue" id="cpTrfNeto">—</div></div>
+      <div class="cp-item"><div class="cp-lbl">Diferencia com.</div><div class="cp-val c-dim" id="cpTrfDif">—</div></div>
+    </div>
+  </div></div>
+
+
+  <!-- CRIPTO -->
+  <div class="cond-fields" id="cf-cripto"><div class="cond-sub">
+    <div class="cond-sub-title">Envío de Criptomoneda</div>
+    <div class="fg-row">
+      <div class="fg"><label>Crypto a enviar</label>
+        <select id="crpCoin"><option value="USDT">USDT (Tether)</option><option value="USDC">USDC</option><option value="BTC">BTC (Bitcoin)</option><option value="ETH">ETH (Ethereum)</option></select>
+      </div>
+      <div class="fg"><label>Cantidad de crypto</label><input type="number" id="crpCantidad" placeholder="ej. 1000" step="0.000001" oninput="calcCripto()"></div>
+    </div>
+    <div class="fg-row">
+      <div class="fg"><label>Tipo de cambio (MXN por crypto)</label><input type="number" id="crpTasa" placeholder="ej. 17.5 MXN/USDT" step="0.0001" oninput="calcCripto()"></div>
+      <div class="fg"><label>% Comisión al cliente</label><input type="number" id="crpComPct" placeholder="ej. 2" step="0.01" oninput="calcCripto()"></div>
+    </div>
+    <div class="fg-row">
+      <div class="fg"><label>Moneda recibida del cliente</label>
+        <select id="crpMonRecib"><option>MXN</option><option>USD</option><option>EUR</option></select>
+      </div>
+      <div class="fg"><label>Tasa proveedor (MXN/crypto)</label><input type="number" id="crpTasaProv" placeholder="igual o mayor a tasa cliente" step="0.0001" oninput="calcCripto()"></div>
+    </div>
+    <p class="info-small">💡 Compras la totalidad al proveedor: crypto pedida + tu comisión. El cliente paga el precio con comisión incluida.</p>
+    <div class="calc-preview" style="grid-template-columns:repeat(5,1fr)">
+      <div class="cp-item"><div class="cp-lbl">Cliente paga</div><div class="cp-val c-blue" id="cpCrpPaga">—</div></div>
+      <div class="cp-item"><div class="cp-lbl">Com. $</div><div class="cp-val c-gold" id="cpCrpCom">—</div></div>
+      <div class="cp-item"><div class="cp-lbl">Pago proveedor</div><div class="cp-val c-red" id="cpCrpProv">—</div></div>
+      <div class="cp-item"><div class="cp-lbl">Ganancia</div><div class="cp-val c-green" id="cpCrpGan">—</div></div>
+      <div class="cp-item"><div class="cp-lbl">Crypto total</div><div class="cp-val c-dim" id="cpCrpTotal">—</div></div>
+    </div>
+  </div></div>
+
+  <div class="fg"><label>Notas</label><textarea id="opNotes" rows="2" placeholder="Observaciones…"></textarea></div>
+  <div class="modal-actions">
+    <button class="btn-ghost" onclick="closeOpModal()">Cancelar</button>
+    <button class="btn-danger" id="opDeleteBtn" onclick="deleteOpFromModal()" style="display:none">Eliminar</button>
+    <button class="btn" onclick="saveOp()">Guardar</button>
+  </div>
+</div>
+</div>
+
+<!-- ═══ MODAL: NUEVO / EDITAR NEGOCIO ═══ -->
+<div class="overlay" id="bizModal">
+<div class="modal">
+  <h2 id="bizModalTitle">Nuevo Negocio</h2>
+  <input type="hidden" id="bizEditId" value="">
+  <div class="fg"><label>Nombre</label><input type="text" id="bizName" placeholder="ej. PERU INT"></div>
+  <div class="fg-row">
+    <div class="fg"><label>Tipo</label>
+      <select id="bizType">
+        <option value="envio">Envío de dinero</option>
+        <option value="cambio">Cambio de divisas</option>
+        <option value="comision">Comisiones / Servicios</option>
+        <option value="comercio">Tienda / Comercio</option>
+        <option value="transferencia">Transferencias</option>
+        <option value="cripto">Cripto / Digital</option>
+        <option value="renta">Renta de propiedades</option>
+        <option value="marketing">Marketing digital</option>
+        <option value="webdev">Desarrollo web</option>
+        <option value="misc">Misceláneo / General</option>
+      </select>
+    </div>
+    <div class="fg"><label>Moneda principal</label>
+      <select id="bizCurrency"><option>MXN</option><option>USD</option><option>PEN</option><option>COP</option><option>GTQ</option><option>EUR</option></select>
+    </div>
+  </div>
+  <div class="fg"><label>Color</label><div class="cpicker" id="colorPicker"></div></div>
+  <div class="fg"><label>Descripción / Notas</label><textarea id="bizDesc" rows="2" placeholder="ej. Envíos a Perú vía efectivo, comisión del 2%…"></textarea></div>
+  <div class="modal-actions">
+    <button class="btn-ghost" onclick="closeBizModal()">Cancelar</button>
+    <button class="btn-danger" id="bizDeleteBtn" onclick="deleteBiz()" style="display:none">Eliminar</button>
+    <button class="btn" onclick="saveBiz()">Guardar</button>
+  </div>
+</div>
+</div>
+
+<!-- ═══ MODAL: CLIENTE ═══ -->
+<div class="overlay" id="clientModal">
+<div class="modal" style="width:580px;max-width:98vw;">
+  <h2 id="clientModalTitle">Nuevo Cliente</h2>
+  <input type="hidden" id="clientEditId" value="">
+  <div class="fg-row">
+    <div class="fg"><label>Nombre del cliente</label><input type="text" id="clientName" placeholder="Nombre completo o alias…"></div>
+    <div class="fg"><label>Teléfono / Contacto</label><input type="text" id="clientPhone" placeholder="WhatsApp, email…"></div>
+  </div>
+  <div class="fg-row">
+    <div class="fg" style="flex:2">
+      <label>Negocios asociados <span style="color:var(--text3);font-weight:400;font-size:10px">(selecciona uno o varios)</span></label>
+      <div id="clientBizChips" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;min-height:32px;padding:6px 8px;border:1px solid var(--border2);border-radius:8px;background:var(--s2);cursor:default;"></div>
+    </div>
+    <div class="fg"><label>Referido por</label><input type="text" id="clientRef" placeholder="Nombre del referidor…"></div>
+  </div>
+  <div class="fg"><label>Notas generales</label><textarea id="clientNotes" rows="2" placeholder="Descripción, observaciones…"></textarea></div>
+
+  <div style="margin:14px 0 8px;">
+    <div class="cond-sub-title" style="font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text3);margin-bottom:10px;">Condiciones por tipo de operación</div>
+
+    <!-- ENVÍO -->
+    <div class="cond-section" style="margin-bottom:8px;">
+      <div class="cond-section-title">Envío de dinero</div>
+      <div class="cond-row">
+        <div class="fg"><label>Com. al cliente %</label><input type="number" id="ccEnvComPct" placeholder="ej. 3" step="0.01"></div>
+        <div class="fg"><label>Mi ganancia %</label><input type="number" id="ccEnvMiPct" placeholder="ej. 1.5" step="0.01"></div>
+        <div class="fg"><label>Notas envío</label><input type="text" id="ccEnvNota" placeholder="canal, límite…"></div>
+      </div>
+    </div>
+    <!-- CAMBIO -->
+    <div class="cond-section" style="margin-bottom:8px;">
+      <div class="cond-section-title">Cambio de divisas</div>
+      <div class="cond-row">
+        <div class="fg"><label>Com. total %</label><input type="number" id="ccCamComPct" placeholder="ej. 6" step="0.01"></div>
+        <div class="fg"><label>Mi utilidad %</label><input type="number" id="ccCamMiPct" placeholder="ej. 1.5" step="0.01"></div>
+        <div class="fg"><label>Banco preferido</label><input type="text" id="ccCamBanco" placeholder="ej. BBVA Pink"></div>
+      </div>
+    </div>
+    <!-- CRIPTO -->
+    <div class="cond-section" style="margin-bottom:8px;">
+      <div class="cond-section-title">Cripto (USDT / BTC…)</div>
+      <div class="cond-row">
+        <div class="fg"><label>Com. al cliente %</label><input type="number" id="ccCrpComPct" placeholder="ej. 2" step="0.01"></div>
+        <div class="fg"><label>Coin preferida</label>
+          <select id="ccCrpCoin"><option>USDT</option><option>USDC</option><option>BTC</option><option>ETH</option></select>
+        </div>
+        <div class="fg"><label>Notas cripto</label><input type="text" id="ccCrpNota" placeholder="red, wallet…"></div>
+      </div>
+    </div>
+    <!-- TRANSFERENCIA -->
+    <div class="cond-section" style="margin-bottom:8px;">
+      <div class="cond-section-title">Transferencia</div>
+      <div class="cond-row">
+        <div class="fg"><label>Com. al cliente %</label><input type="number" id="ccTrfComPct" placeholder="ej. 3" step="0.01"></div>
+        <div class="fg"><label>Mi ganancia %</label><input type="number" id="ccTrfMiPct" placeholder="ej. 1.5" step="0.01"></div>
+        <div class="fg"><label>Canal habitual</label><input type="text" id="ccTrfCanal" placeholder="ej. Transfersapp"></div>
+      </div>
+    </div>
+    <!-- MISC / GENERAL -->
+    <div class="cond-section">
+      <div class="cond-section-title">General / Misceláneo</div>
+      <div class="cond-row">
+        <div class="fg"><label>Com. general %</label><input type="number" id="ccMisComPct" placeholder="ej. 1" step="0.01"></div>
+        <div class="fg"><label>Mi parte %</label><input type="number" id="ccMisMiPct" placeholder="ej. 0.5" step="0.01"></div>
+        <div class="fg"><label>Moneda preferida</label>
+          <select id="ccMisMon"><option>MXN</option><option>USD</option><option>EUR</option><option>USDT</option></select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-actions">
+    <button class="btn-ghost" onclick="closeClientModal()">Cancelar</button>
+    <button class="btn-danger" id="clientDeleteBtn" onclick="deleteClient()" style="display:none">Eliminar</button>
+    <button class="btn" onclick="saveClient()">Guardar cliente</button>
+  </div>
+</div>
+</div>
+
+<!-- ═══ MODAL: TIPO DE OPERACIÓN ═══ -->
+<div class="overlay" id="opTypeModal">
+<div class="modal" style="width:520px;max-width:98vw;">
+  <h2 id="opTypeModalTitle">Nuevo Tipo de Operación</h2>
+  <input type="hidden" id="otEditId" value="">
+  <div class="fg-row">
+    <div class="fg" style="flex:2">
+      <label>Nombre / Etiqueta</label>
+      <input type="text" id="otLabel" placeholder="ej. Préstamo, Remesa, Cargo…">
+    </div>
+    <div class="fg" style="flex:1">
+      <label>Color</label>
+      <input type="color" id="otColor" value="#f0c040" style="height:38px;width:100%;border-radius:6px;cursor:pointer;border:1px solid var(--border2);background:var(--s2);">
+    </div>
+  </div>
+  <div class="fg">
+    <label>Descripción (opcional)</label>
+    <input type="text" id="otDesc" placeholder="Para qué se usa este tipo…">
+  </div>
+
+  <div style="margin:14px 0 4px">
+    <div class="cfg-section-title" style="font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text3);margin-bottom:8px;">
+      Habilitado en — Negocios
+    </div>
+    <div style="font-size:10px;color:var(--text3);margin-bottom:6px;">Si no seleccionas ninguno, estará disponible en todos los negocios.</div>
+    <div class="scope-chips" id="otBizChips"></div>
+  </div>
+
+  <div style="margin:14px 0 4px">
+    <div class="cfg-section-title" style="font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text3);margin-bottom:8px;">
+      Habilitado en — Clientes específicos
+    </div>
+    <div style="font-size:10px;color:var(--text3);margin-bottom:6px;">Opcional: restringe a ciertos clientes. Vacío = todos los clientes del negocio.</div>
+    <div class="scope-chips" id="otClientChips"></div>
+  </div>
+
+  <div style="margin-top:12px;display:flex;align-items:center;gap:10px;">
+    <label style="font-size:11px;color:var(--text2);display:flex;align-items:center;gap:8px;cursor:pointer;">
+      <button class="optype-toggle" id="otEnabledToggle" onclick="this.classList.toggle('on')"></button>
+      Habilitado globalmente
+    </label>
+  </div>
+
+  <div class="modal-actions">
+    <button class="btn-ghost" onclick="closeOpTypeModal()">Cancelar</button>
+    <button class="btn-danger" id="otDeleteBtn" onclick="deleteOpType()" style="display:none">Eliminar</button>
+    <button class="btn" onclick="saveOpType()">Guardar</button>
+  </div>
+</div>
+</div>
+
+<!-- ═══ MODAL: PDF REPORT ═══ -->
+<div class="overlay" id="pdfModal">
+<div class="modal" style="width:560px">
+  <h2>Generar Reporte PDF</h2>
+  <div class="pdf-options">
+    <div class="fg">
+      <label>Período</label>
+      <div class="pdf-row" id="periodBtns">
+        <button class="period-btn active" data-period="semana" onclick="setPeriod(this,'semana')">Esta semana</button>
+        <button class="period-btn" data-period="mes" onclick="setPeriod(this,'mes')">Este mes</button>
+        <button class="period-btn" data-period="año" onclick="setPeriod(this,'año')">Este año</button>
+        <button class="period-btn" data-period="custom" onclick="setPeriod(this,'custom')">Personalizado</button>
+      </div>
+    </div>
+    <div id="customDateRange" style="display:none">
+      <div class="fg-row">
+        <div class="fg"><label>Desde</label><input type="date" id="pdfFrom"></div>
+        <div class="fg"><label>Hasta</label><input type="date" id="pdfTo"></div>
+      </div>
+    </div>
+    <div class="fg">
+      <label>Negocios a incluir</label>
+      <div style="display:flex;gap:6px;margin-bottom:8px">
+        <button class="btn-ghost" onclick="checkAllBiz(true)">Todos</button>
+        <button class="btn-ghost" onclick="checkAllBiz(false)">Ninguno</button>
+      </div>
+      <div class="biz-check-grid" id="pdfBizChecks"></div>
+    </div>
+    <div class="fg">
+      <label>Incluir en el reporte</label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:3px">
+        <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer"><input type="checkbox" id="pdfIncStats" checked> Estadísticas</label>
+        <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer"><input type="checkbox" id="pdfIncOps" checked> Detalle operaciones</label>
+        <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer"><input type="checkbox" id="pdfIncCmp"> Comparativa</label>
+      </div>
+    </div>
+  </div>
+  <div class="modal-actions">
+    <button class="btn-ghost" onclick="closePdfModal()">Cancelar</button>
+    <button class="btn" onclick="generatePDF()">🖨 Imprimir / Guardar PDF</button>
+  </div>
+</div>
+</div>
+
+
+<script src="app.js"></script>
+<script>
+  // Boot: init() is async — called after DOM ready
+  document.addEventListener('DOMContentLoaded', () => init());
+</script>
+</html>
