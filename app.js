@@ -67,9 +67,12 @@ async function doLogin() {
     }
     applyLoaded(data);
     hideLoginScreen(email);
-    buildNav(); buildBizViews(); buildMpicker(); renderAll();
+    currentDate = new Date(); showingAllMonths = true;
+    buildNav(); buildBizViews(); populateResMonth(); buildMpicker(); renderAll();
+    updateMonthLabel(); renderYearSummary();
+    (S.customOpTypes||[]).forEach(t=>ensureCustomBadgeCSS(t.id,t.color));
     window.DB.setSyncStatus('idle');
-    showToast(_authTab === 'register' ? 'Cuenta creada. ¡Bienvenido!' : 'Bienvenido de nuevo', 'ok');
+    showToast(!data ? '¡Bienvenido! Cuenta nueva.' : 'Bienvenido, ' + email.split('@')[0], 'ok');
   } catch(e) {
     errEl.style.color = 'var(--red)';
     // Traducir errores comunes de Supabase Auth
@@ -273,7 +276,7 @@ function importarDatos(event) {
     // Aplicar en memoria
     applyLoaded(newS);
     // Guardar en localStorage
-    localStorage.setItem(STORE_KEY, JSON.stringify(newS));
+    localStorage.setItem(STORE, JSON.stringify(newS));
     // Subir a Supabase inmediatamente
     showToast('Restaurando y sincronizando…', 'ok');
     if (window.DB) window.DB.scheduleSync();
@@ -3065,7 +3068,6 @@ async function init(){
       showLoginScreen();
       return;
     }
-    if (data === null && !sess) { showLoginScreen(); return; }
     applyLoaded(data);
     hideLoginScreen(sess.email);
   } else {
@@ -3079,4 +3081,4 @@ async function init(){
   // Restore custom type badge CSS
   (S.customOpTypes||[]).forEach(t=>ensureCustomBadgeCSS(t.id,t.color));
 }
-init();
+// init() called from index.html
