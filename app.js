@@ -532,7 +532,8 @@ function opGanancia(op){
   return 0;
 }
 function opCobrado(op){
-  if(op.tipo==='gasto')          return op.gastoMto||0;
+  // Gastos NO suman al volumen — son salidas de dinero
+  if(op.tipo==='gasto')          return 0;
   if(op.tipo==='comision')       return op.monto||0;
   if(op.tipo==='deposito')       return op.monto||op.depMto||0;
   return op.cobrado||0;
@@ -3053,6 +3054,52 @@ function renderAll(){
 // ════════════════════════════════════════════════════
 //  INIT
 // ════════════════════════════════════════════════════
+
+// ════════════════════════════════════════════════════
+//  MOBILE DRAWER
+// ════════════════════════════════════════════════════
+function toggleMobileDrawer() {
+  const d = document.getElementById('mobileDrawer');
+  if (!d) return;
+  const isOpen = d.classList.toggle('open');
+  if (isOpen) _syncMobileDrawerNav();
+}
+
+function _syncMobileDrawerNav() {
+  const target = document.getElementById('mobileDrawerNav');
+  if (!target) return;
+  // Clone the sidebar nav groups into the drawer
+  const groups = document.querySelectorAll('aside .nav-group');
+  target.innerHTML = '';
+  groups.forEach(g => {
+    const clone = g.cloneNode(true);
+    // Show labels in drawer
+    const lbl = clone.querySelector('.nav-label');
+    if (lbl) lbl.style.display = '';
+    // Wire up nav clicks to also close drawer
+    clone.querySelectorAll('.nav-item, .nav-sub-item').forEach(item => {
+      item.addEventListener('click', () => toggleMobileDrawer());
+    });
+    target.appendChild(clone);
+  });
+  // Sync user badge
+  const badge = document.getElementById('userBadge');
+  const mobileBadge = document.getElementById('mobileUserBadge');
+  if (badge && mobileBadge) mobileBadge.textContent = badge.textContent;
+  // Sync month label
+  const ml = document.getElementById('monthLabel');
+  const mlm = document.getElementById('monthLabelMobile');
+  if (ml && mlm) mlm.textContent = ml.textContent;
+}
+
+// Show/hide mobile menu button based on viewport
+function _checkMobileBtn() {
+  const btn = document.getElementById('mobileMenuBtn');
+  if (!btn) return;
+  btn.style.display = window.innerWidth <= 768 ? 'flex' : 'none';
+}
+window.addEventListener('resize', _checkMobileBtn);
+
 async function init(){
   loadTheme();
 
@@ -3084,5 +3131,6 @@ async function init(){
   renderYearSummary();
   // Restore custom type badge CSS
   (S.customOpTypes||[]).forEach(t=>ensureCustomBadgeCSS(t.id,t.color));
+  _checkMobileBtn();
 }
 // init() called from index.html
