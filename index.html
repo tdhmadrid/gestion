@@ -624,6 +624,8 @@ td{padding:10px 12px;font-size:12px;vertical-align:middle;}
 /* ── Biz period filter pills ── */
 .bpill-active{background:var(--gold)!important;color:#0c0e11!important;font-weight:700!important;}
 </style>
+<!-- Supabase JS SDK -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="db.js"></script>
 
 </head>
@@ -1303,7 +1305,10 @@ td{padding:10px 12px;font-size:12px;vertical-align:middle;}
 <script src="app.js"></script>
 <script>
   // Boot: init() is async — called after DOM ready
-  document.addEventListener('DOMContentLoaded', () => init());
+  document.addEventListener('DOMContentLoaded', () => {
+    window.DB.dbInit();   // inicializa el cliente Supabase
+    init();
+  });
 
 </script>
 </html>

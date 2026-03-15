@@ -185,22 +185,19 @@ function showToast(msg, tipo) {
  * la clave principal, para que la migración sea completa.
  */
 function exportarDatos() {
-  const snapshot = {};
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    snapshot[key] = localStorage.getItem(key);   // guarda como string (igual que lo almacena)
-  }
-  if (Object.keys(snapshot).length === 0) {
-    showToast('No hay datos guardados para exportar.', 'error');
+  // Exportar S (estado actual en memoria) — siempre tiene los datos más recientes
+  if (!S || (!S.businesses?.length && !S.ops?.length && !S.clients?.length)) {
+    showToast('No hay datos para exportar.', 'error');
     return;
   }
-  const now    = new Date();
-  const fecha  = now.toISOString().slice(0, 10);   // YYYY-MM-DD
-  const hora   = now.toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'}).replace(':','-');
-  const sess   = window.DB ? window.DB.getSession() : null;
-  const userTag = sess ? '-' + sess.username.toLowerCase().replace(/[^a-z0-9]/g,'') : '';
-  const nombre = `backup-${APP_NAME}${userTag}-${fecha}-${hora}.json`;
-  const blob = new Blob([JSON.stringify(snapshot, null, 2)], { type: 'application/json' });
+  const now     = new Date();
+  const fecha   = now.toISOString().slice(0, 10);
+  const hora    = now.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' }).replace(':', '-');
+  const sess    = window.DB ? window.DB.getSession() : null;
+  const userTag = sess ? '-' + sess.email.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '') : '';
+  const nombre  = `backup-${APP_NAME}${userTag}-${fecha}-${hora}.json`;
+  // El backup contiene solo S — los datos de negocio, sin tokens ni claves de sesión
+  const blob = new Blob([JSON.stringify({ version: 2, exported: now.toISOString(), data: S }, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = nombre;
@@ -238,69 +235,52 @@ function importarDatos(event) {
     showToast('No se pudo leer el archivo. Inténtalo de nuevo.', 'error');
     input.value = '';
   };
-  reader.onload = (e) => {
+  reader.onload = async (e) => {
     let parsed;
+    try { parsed = JSON.parse(e.target.result); }
+    catch (err) { showToast('Archivo JSON inválido: ' + err.message, 'error'); input.value=''; return; }
 
-    // Error: JSON mal formado
-    try {
-      parsed = JSON.parse(e.target.result);
-    } catch (err) {
-      showToast('El archivo no es un JSON válido: ' + err.message, 'error');
-      input.value = '';
-      return;
-    }
-
-    // Error: objeto vacío o inesperado
     if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
-      showToast('Formato de backup inválido (se esperaba un objeto JSON).', 'error');
-      input.value = '';
-      return;
+      showToast('Formato de backup inválido.', 'error'); input.value=''; return;
     }
 
-    const numClaves = Object.keys(parsed).length;
-    if (numClaves === 0) {
-      showToast('El archivo de backup está vacío.', 'error');
-      input.value = '';
-      return;
+    // Detectar formato: v2 ({ version:2, data:{...} }) o v1 (snapshot localStorage)
+    let newS = null;
+    if (parsed.version === 2 && parsed.data) {
+      // Formato nuevo — solo contiene los datos de negocio
+      newS = parsed.data;
+    } else if (parsed.ops_v4 || parsed['ops_v4']) {
+      // Formato v1 — snapshot de localStorage, extraer la clave de datos
+      const raw = parsed.ops_v4 || parsed['ops_v4'];
+      try { newS = typeof raw === 'string' ? JSON.parse(raw) : raw; } catch(e) {}
+    } else {
+      // Intentar usar el objeto directamente si tiene la estructura de S
+      if (parsed.businesses !== undefined && parsed.ops !== undefined) newS = parsed;
     }
 
-    if (!confirm(
-      `¿Restaurar backup?\n\n` +
-      `• Archivo: ${file.name}\n` +
-      `• Claves a restaurar: ${numClaves}\n\n` +
-      `Esto reemplazará TODOS los datos actuales y recargará la página.`
-    )) {
-      input.value = '';
-      return;
+    if (!newS || (!newS.businesses && !newS.ops)) {
+      showToast('No se encontraron datos válidos en el backup.', 'error');
+      input.value=''; return;
     }
 
-    // Limpia localStorage para evitar datos huérfanos
-    localStorage.clear();
-
-    // Restaura cada par clave-valor
-    let errores = 0;
-    Object.entries(parsed).forEach(([key, value]) => {
-      try {
-        // Los valores fueron guardados como strings; si el backup es del
-        // exportador nuevo (strings), se guardan directamente.
-        // Si viniera de un exportador antiguo que guardó objetos, los
-        // serializamos de nuevo para mayor compatibilidad.
-        localStorage.setItem(key, typeof value === 'string' ? value : JSON.stringify(value));
-      } catch (err) {
-        console.warn(`No se pudo restaurar la clave "${key}":`, err);
-        errores++;
-      }
-    });
-
-    input.value = '';
-
-    if (errores > 0) {
-      console.warn(`${errores} clave(s) no pudieron restaurarse.`);
+    const nBiz = newS.businesses?.length ?? 0;
+    const nOps = newS.ops?.length ?? 0;
+    const nCli = newS.clients?.length ?? 0;
+    if (!confirm(`¿Restaurar backup?\n\n• ${file.name}\n• ${nBiz} negocios · ${nOps} operaciones · ${nCli} clientes\n\nEsto reemplazará TODOS los datos actuales.`)) {
+      input.value=''; return;
     }
 
-    // Recarga la página para que la app lea los datos recién restaurados
-    showToast('✓ Backup restaurado. Recargando…', 'ok');
-    setTimeout(() => location.reload(), 900);
+    // Aplicar en memoria
+    applyLoaded(newS);
+    // Guardar en localStorage
+    localStorage.setItem(STORE_KEY, JSON.stringify(newS));
+    // Subir a Supabase inmediatamente
+    showToast('Restaurando y sincronizando…', 'ok');
+    if (window.DB) window.DB.scheduleSync();
+    // Reconstruir UI
+    buildNav(); buildBizViews(); buildMpicker(); renderAll();
+    input.value='';
+    showToast(`✓ Backup restaurado: ${nBiz} negocios, ${nOps} ops, ${nCli} clientes`, 'ok');
   };
 
   reader.readAsText(file);

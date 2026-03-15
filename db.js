@@ -1,51 +1,43 @@
 // ════════════════════════════════════════════════════
-//  db.js — Supabase Auth + persistencia v4
-//  · Login/registro real con email + password (Supabase Auth)
-//  · user_id = auth.uid() — persistente entre dispositivos
-//  · Autosave 800ms debounce
-//  · Fallback localStorage si offline
+//  db.js  v5  —  usa @supabase/supabase-js via CDN
+//  Cargado DESPUÉS de que el CDN script lo inyecta
+//  como window.supabase
 // ════════════════════════════════════════════════════
 
-const SUPABASE_URL      = 'https://kjvftqsscttnghmlfncj.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_iaQ06UGlROdlqqOm-Lo8wg_31AcM2GN';
-const TABLE             = 'user_data';
+const _SB_URL  = 'https://kjvftqsscttnghmlfncj.supabase.co';
+const _SB_KEY  = 'sb_publishable_iaQ06UGlROdlqqOm-Lo8wg_31AcM2GN';
+const _TABLE   = 'user_data';
+const STORE_KEY = 'ops_v4';
 
-const STORE_KEY     = 'ops_v4';
-const SB_TOKEN_KEY  = 'sb_access_token';
-const SB_RTOKEN_KEY = 'sb_refresh_token';
-const SB_USER_KEY   = 'sb_user';
+// ── Cliente Supabase (se inicializa en dbInit) ─────
+let _sb   = null;
+let _user = null;
 
-// ── Token en memoria + localStorage ───────────────
-let _accessToken  = localStorage.getItem(SB_TOKEN_KEY)  || null;
-let _refreshToken = localStorage.getItem(SB_RTOKEN_KEY) || null;
-let _user         = null;
-try { _user = JSON.parse(localStorage.getItem(SB_USER_KEY)); } catch(e) {}
-
-function _saveAuth(access, refresh, user) {
-  _accessToken  = access;
-  _refreshToken = refresh;
-  _user         = user;
-  localStorage.setItem(SB_TOKEN_KEY,  access);
-  localStorage.setItem(SB_RTOKEN_KEY, refresh);
-  localStorage.setItem(SB_USER_KEY,   JSON.stringify(user));
-}
-function _clearAuth() {
-  _accessToken = _refreshToken = _user = null;
-  [SB_TOKEN_KEY, SB_RTOKEN_KEY, SB_USER_KEY, STORE_KEY].forEach(k => localStorage.removeItem(k));
-}
-function getSession() {
-  if (!_user || !_accessToken) return null;
-  return { userId: _user.id, email: _user.email };
+function dbInit() {
+  if (_sb) return;
+  // El CDN expone createClient en window.supabase
+  const { createClient } = window.supabase;
+  _sb = createClient(_SB_URL, _SB_KEY, {
+    auth: {
+      persistSession:    true,   // guarda sesión en localStorage automáticamente
+      autoRefreshToken:  true,   // refresca el JWT antes de que expire
+      detectSessionInUrl: false,
+    },
+  });
+  // Escuchar cambios de sesión
+  _sb.auth.onAuthStateChange((event, session) => {
+    _user = session?.user ?? null;
+    if (event === 'SIGNED_OUT') { localStorage.removeItem(STORE_KEY); }
+  });
 }
 
 // ── Sync status ────────────────────────────────────
-let _saveTimer = null;
-let _lastSaved = null;
-let _isOnline  = navigator.onLine;
+let _saveTimer    = null;
+let _lastSaved    = null;
 let _pendingFlush = false;
 
-window.addEventListener('online',  () => { _isOnline = true;  _updateStatus('idle'); if(_pendingFlush) scheduleSync(); });
-window.addEventListener('offline', () => { _isOnline = false; _updateStatus('offline'); });
+window.addEventListener('online',  () => { if (_pendingFlush) scheduleSync(); });
+window.addEventListener('offline', () => { _updateStatus('offline'); });
 
 function _updateStatus(status, msg) {
   const el = document.getElementById('syncStatus');
@@ -53,171 +45,110 @@ function _updateStatus(status, msg) {
   const map = {
     idle:    ['',  'var(--text3)', ''],
     saving:  ['⟳', 'var(--gold)',  'Guardando…'],
-    saved:   ['✓', 'var(--green)', 'Guardado ' + (_lastSaved ? _lastSaved.toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'}) : '')],
-    error:   ['⚠', 'var(--red)',   msg || 'Error — guardado local'],
-    offline: ['◌', 'var(--text3)', 'Sin conexión · local'],
+    saved:   ['✓', 'var(--green)', 'Guardado ' + (_lastSaved
+                ? _lastSaved.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })
+                : '')],
+    error:   ['⚠', 'var(--red)',   msg || 'Error — datos guardados local'],
+    offline: ['◌', 'var(--text3)', 'Sin conexión · guardado local'],
   };
   const [icon, col, txt] = map[status] || map.idle;
   el.innerHTML = `<span style="color:${col};font-size:10px;font-family:'IBM Plex Mono',monospace">${icon} ${txt}</span>`;
 }
 function setSyncStatus(s, m) { _updateStatus(s, m); }
 
-// ── Supabase Auth API ──────────────────────────────
-function _authHdrs(token) {
-  return {
-    'apikey':        SUPABASE_ANON_KEY,
-    'Authorization': 'Bearer ' + (token || SUPABASE_ANON_KEY),
-    'Content-Type':  'application/json',
-  };
-}
-
-async function _authPost(path, body, token) {
-  const r = await fetch(`${SUPABASE_URL}/auth/v1${path}`, {
-    method: 'POST',
-    headers: _authHdrs(token),
-    body: JSON.stringify(body),
-  });
-  const data = await r.json();
-  if (!r.ok) throw new Error(data.error_description || data.msg || data.message || `HTTP ${r.status}`);
-  return data;
-}
-
-// Refrescar token automáticamente
-async function _refreshSession() {
-  if (!_refreshToken) throw new Error('Sin sesión activa');
-  const data = await _authPost('/token?grant_type=refresh_token', { refresh_token: _refreshToken });
-  _saveAuth(data.access_token, data.refresh_token, data.user);
-  return data.access_token;
-}
-
-// Obtener token válido (refresca si es necesario)
-async function _getToken() {
-  if (!_accessToken) throw new Error('No autenticado');
-  // Intentar refrescar si el token está cerca de expirar (heurística simple)
-  try {
-    // Validar que el token funciona con un test rápido
-    return _accessToken;
-  } catch(e) {
-    return await _refreshSession();
-  }
-}
-
-// ── REST API para user_data ────────────────────────
+// ── Leer datos del usuario ─────────────────────────
 async function _dataRead(userId) {
-  const token = await _getToken();
-  const r = await fetch(
-    `${SUPABASE_URL}/rest/v1/${TABLE}?user_id=eq.${encodeURIComponent(userId)}&select=payload`,
-    { headers: _authHdrs(token) }
-  );
-  if (r.status === 401) {
-    // Token expirado — refrescar y reintentar
-    const newToken = await _refreshSession();
-    const r2 = await fetch(
-      `${SUPABASE_URL}/rest/v1/${TABLE}?user_id=eq.${encodeURIComponent(userId)}&select=payload`,
-      { headers: _authHdrs(newToken) }
-    );
-    if (!r2.ok) throw new Error(`Leer datos: HTTP ${r2.status}`);
-    const rows2 = await r2.json();
-    return rows2.length ? rows2[0].payload : null;
-  }
-  if (!r.ok) throw new Error(`Leer datos: HTTP ${r.status}: ${await r.text()}`);
-  const rows = await r.json();
-  return rows.length ? rows[0].payload : null;
+  const { data, error } = await _sb
+    .from(_TABLE)
+    .select('payload')
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data?.payload ?? null;
 }
 
-async function _dataWrite(userId, data) {
-  const token = await _getToken();
-  const body = JSON.stringify({ user_id: userId, payload: data, updated_at: new Date().toISOString() });
-
-  const doWrite = async (tok) => {
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/${TABLE}`, {
-      method: 'POST',
-      headers: { ..._authHdrs(tok), 'Prefer': 'resolution=merge-duplicates,return=minimal' },
-      body,
-    });
-    if (!r.ok) throw new Error(`Guardar datos: HTTP ${r.status}: ${await r.text()}`);
-  };
-
-  try { await doWrite(token); }
-  catch(e) {
-    if (e.message.includes('401')) {
-      const newToken = await _refreshSession();
-      await doWrite(newToken);
-    } else throw e;
-  }
+// ── Escribir datos del usuario (upsert) ───────────
+async function _dataWrite(userId, payload) {
+  const { error } = await _sb
+    .from(_TABLE)
+    .upsert({ user_id: userId, payload, updated_at: new Date().toISOString() },
+            { onConflict: 'user_id' });
+  if (error) throw new Error(error.message);
 }
 
-// ── Autosave ───────────────────────────────────────
+// ── Autosave con debounce 800ms ────────────────────
 function scheduleSync() {
   if (_saveTimer) clearTimeout(_saveTimer);
   _updateStatus('saving');
-  _saveTimer = setTimeout(async () => {
-    try {
-      if (!window.S) return;
-      localStorage.setItem(STORE_KEY, JSON.stringify(window.S));
-      const sess = getSession();
-      if (_isOnline && sess) {
-        await _dataWrite(sess.userId, window.S);
-        _pendingFlush = false;
-      } else {
-        _pendingFlush = true;
-        if (!_isOnline) { _updateStatus('offline'); return; }
-      }
-      _lastSaved = new Date();
-      _updateStatus('saved');
-      setTimeout(() => _updateStatus('idle'), 3000);
-    } catch(e) {
-      console.error('[db] sync:', e.message);
-      _pendingFlush = true;
-      _updateStatus('error', e.message.slice(0, 60));
-    }
-  }, 800);
+  _saveTimer = setTimeout(_doSync, 800);
+}
+
+async function _doSync() {
+  const data = window.S;
+  if (!data) { _updateStatus('idle'); return; }
+
+  // Siempre local primero
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(data)); } catch(e) {}
+
+  if (!navigator.onLine) { _pendingFlush = true; _updateStatus('offline'); return; }
+
+  const sess = await _sb.auth.getSession();
+  const uid  = sess?.data?.session?.user?.id;
+  if (!uid)  { _updateStatus('idle'); return; }
+
+  try {
+    await _dataWrite(uid, data);
+    _pendingFlush = false;
+    _lastSaved = new Date();
+    _updateStatus('saved');
+    setTimeout(() => _updateStatus('idle'), 3000);
+  } catch(e) {
+    console.error('[db] sync:', e.message);
+    _pendingFlush = true;
+    _updateStatus('error', e.message.slice(0, 60));
+  }
 }
 
 // ── Registro ───────────────────────────────────────
 async function dbSignUp(email, password) {
-  const data = await _authPost('/signup', { email, password });
-  if (data.access_token) {
-    _saveAuth(data.access_token, data.refresh_token, data.user);
+  const { data, error } = await _sb.auth.signUp({ email, password });
+  if (error) throw new Error(error.message);
+  _user = data.user;
+  // Si devuelve sesión inmediata (sin confirmación de email)
+  if (data.session) {
     return { user: data.user, needsConfirmation: false };
   }
-  // Supabase puede requerir confirmación de email
   return { user: data.user, needsConfirmation: true };
 }
 
 // ── Login ──────────────────────────────────────────
 async function dbLogin(email, password) {
-  const data = await _authPost('/token?grant_type=password', { email, password });
-  _saveAuth(data.access_token, data.refresh_token, data.user);
-  // Cargar datos del usuario
-  let remoteData = null;
-  try { remoteData = await _dataRead(data.user.id); } catch(e) { console.warn('[db] load after login:', e.message); }
-  if (remoteData) localStorage.setItem(STORE_KEY, JSON.stringify(remoteData));
-  return remoteData;
+  const { data, error } = await _sb.auth.signInWithPassword({ email, password });
+  if (error) throw new Error(error.message);
+  _user = data.user;
+  // Cargar datos remotos
+  let remote = null;
+  try { remote = await _dataRead(data.user.id); } catch(e) { console.warn('[db] post-login load:', e.message); }
+  if (remote) localStorage.setItem(STORE_KEY, JSON.stringify(remote));
+  return remote;
 }
 
-// ── Carga al reabrir (token guardado) ─────────────
+// ── Carga al reabrir (sesión guardada por el SDK) ──
 async function dbLoad() {
-  if (!_accessToken || !_user) return null;
+  // El SDK de Supabase restaura la sesión automáticamente desde localStorage
+  const { data: { session } } = await _sb.auth.getSession();
+  if (!session) return null;
+  _user = session.user;
+  // Cargar datos
   try {
-    const remote = await _dataRead(_user.id);
+    const remote = await _dataRead(session.user.id);
     if (remote) { localStorage.setItem(STORE_KEY, JSON.stringify(remote)); return remote; }
   } catch(e) {
-    // Token expirado o error de red
-    if (e.message.includes('401') || e.message.includes('No autenticado')) {
-      try {
-        await _refreshSession();
-        const remote2 = await _dataRead(_user.id);
-        if (remote2) { localStorage.setItem(STORE_KEY, JSON.stringify(remote2)); return remote2; }
-      } catch(e2) {
-        console.warn('[db] refresh failed:', e2.message);
-        _clearAuth();
-        return null; // forzar re-login
-      }
-    }
     console.warn('[db] dbLoad error:', e.message);
+    // Fallback local
+    try { const l = localStorage.getItem(STORE_KEY); if(l) return JSON.parse(l); } catch(e2) {}
   }
-  // Fallback local
+  // Usuario existe pero sin datos remotos aún — usar local
   try { const l = localStorage.getItem(STORE_KEY); if(l) return JSON.parse(l); } catch(e) {}
   return null;
 }
@@ -225,24 +156,29 @@ async function dbLoad() {
 // ── Logout ─────────────────────────────────────────
 async function dbLogout() {
   if (_saveTimer) clearTimeout(_saveTimer);
-  try {
-    if (_accessToken) await _authPost('/logout', {}, _accessToken).catch(()=>{});
-  } catch(e) {}
-  _clearAuth();
+  await _sb.auth.signOut().catch(() => {});
+  localStorage.removeItem(STORE_KEY);
   location.reload();
+}
+
+// ── Sesión activa ──────────────────────────────────
+function getSession() {
+  if (!_user) return null;
+  return { userId: _user.id, email: _user.email };
 }
 
 // ── Diagnóstico ────────────────────────────────────
 async function _diagnose() {
-  console.group('[DB Diagnóstico v4]');
-  console.log('User:', _user?.email, '| ID:', _user?.id);
-  console.log('Token presente:', !!_accessToken);
-  const sess = getSession();
-  if (sess) {
-    try { const d = await _dataRead(sess.userId); console.log('Datos remotos:', d ? 'OK' : 'vacío'); }
-    catch(e) { console.error('Error lectura:', e.message); }
+  console.group('[DB v5 Diagnóstico]');
+  const { data: { session } } = await _sb.auth.getSession();
+  console.log('Sesión:', session ? session.user.email : 'ninguna');
+  if (session) {
+    try {
+      const d = await _dataRead(session.user.id);
+      console.log('Datos remotos:', d ? 'OK (' + JSON.stringify(d).slice(0,60) + '…)' : 'vacío (usuario nuevo)');
+    } catch(e) { console.error('Error lectura:', e.message); }
   }
   console.groupEnd();
 }
 
-window.DB = { scheduleSync, dbLoad, dbLogin, dbSignUp, dbLogout, getSession, setSyncStatus, diagnose: _diagnose };
+window.DB = { dbInit, scheduleSync, dbLoad, dbLogin, dbSignUp, dbLogout, getSession, setSyncStatus, diagnose: _diagnose };
