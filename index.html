@@ -619,7 +619,10 @@ td{padding:10px 12px;font-size:12px;vertical-align:middle;}
 /* ── Logout button ── */
 .logout-btn{background:transparent;border:1px solid var(--border2);color:var(--text3);border-radius:8px;padding:5px 10px;font-size:10px;cursor:pointer;font-family:'IBM Plex Mono',monospace;width:100%;text-align:left;transition:all .15s;margin-top:2px;}
 .logout-btn:hover{border-color:var(--red);color:var(--red);}
-.user-badge{font-size:10px;color:var(--text3);font-family:'IBM Plex Mono',monospace;padding:4px 2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.user-badge{font-size:10px;color:var(--text3);font-family:'IBM Plex Mono',monospace;padding:4px 2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;}
+
+/* ── Biz period filter pills ── */
+.bpill-active{background:var(--gold)!important;color:#0c0e11!important;font-weight:700!important;}
 </style>
 <script src="db.js"></script>
 
@@ -631,23 +634,33 @@ td{padding:10px 12px;font-size:12px;vertical-align:middle;}
 <!-- ══ LOGIN SCREEN ══ -->
 <div id="loginScreen">
   <div class="login-card">
-    <div>
-      <div class="login-logo">Operaciones<small>Panel de Negocios</small></div>
+    <div class="login-logo">Operaciones<small>Panel de Negocios</small></div>
+
+    <!-- Tabs -->
+    <div style="display:flex;gap:2px;background:var(--s3);border-radius:8px;padding:3px;">
+      <button id="tabLogin" onclick="switchAuthTab('login')"
+        style="flex:1;padding:7px;border:none;border-radius:6px;background:var(--s1);color:var(--text);font-size:12px;font-weight:600;cursor:pointer;font-family:'IBM Plex Sans',sans-serif;">
+        Iniciar sesión
+      </button>
+      <button id="tabRegister" onclick="switchAuthTab('register')"
+        style="flex:1;padding:7px;border:none;border-radius:6px;background:transparent;color:var(--text2);font-size:12px;font-weight:600;cursor:pointer;font-family:'IBM Plex Sans',sans-serif;">
+        Crear cuenta
+      </button>
+    </div>
+
+    <div class="login-field">
+      <label class="login-label">Correo electrónico</label>
+      <input class="login-input" id="loginEmail" type="email" placeholder="tu@correo.com" autocomplete="email">
     </div>
     <div class="login-field">
-      <label class="login-label" for="loginUser">Usuario</label>
-      <input class="login-input" id="loginUser" type="text" placeholder="Tu nombre de usuario" autocomplete="username" spellcheck="false">
-    </div>
-    <div class="login-field">
-      <label class="login-label" for="loginPin">PIN</label>
-      <input class="login-input" id="loginPin" type="password" placeholder="••••" maxlength="20" autocomplete="current-password"
+      <label class="login-label">Contraseña</label>
+      <input class="login-input" id="loginPassword" type="password" placeholder="••••••••" autocomplete="current-password"
         onkeydown="if(event.key==='Enter') doLogin()">
     </div>
+
     <div id="loginError" class="login-error"></div>
-    <button class="login-btn" id="loginBtn" onclick="doLogin()">Entrar</button>
-    <p class="login-hint">La primera vez que uses un usuario se crea automáticamente.<br>El PIN no se puede recuperar — anótalo.</p>
-    <div id="loginDiagResult" style="font-size:10px;color:var(--text3);font-family:'IBM Plex Mono',monospace;word-break:break-all;line-height:1.5;max-height:80px;overflow-y:auto;display:none;padding:8px;background:var(--s3);border-radius:6px;margin-top:-8px;"></div>
-    <button onclick="runDiag()" style="background:transparent;border:1px solid var(--border2);color:var(--text3);border-radius:8px;padding:5px 10px;font-size:10px;cursor:pointer;font-family:'IBM Plex Mono',monospace;width:100%;">🔍 Probar conexión con Supabase</button>
+    <button class="login-btn" id="loginBtn" onclick="doLogin()">Iniciar sesión</button>
+    <p class="login-hint" id="loginHint">Tus datos se sincronizan automáticamente entre dispositivos.</p>
   </div>
 </div>
 
@@ -697,7 +710,7 @@ td{padding:10px 12px;font-size:12px;vertical-align:middle;}
       <button class="add-biz-btn" onclick="document.getElementById('importFile').click()" title="Restaura desde un archivo backup" style="text-align:left;padding:7px 10px;">↑ Restaurar copia de seguridad</button>
       <input type="file" id="importFile" accept=".json" style="display:none" onchange="importarDatos(event)">
     </div>
-    <button class="logout-btn" onclick="DB.dbLogout()">⏻ Cerrar sesión</button>
+    <button class="logout-btn" onclick="window.DB.dbLogout()">⏻ Cerrar sesión</button>
   </div>
 </aside>
 
@@ -1292,26 +1305,5 @@ td{padding:10px 12px;font-size:12px;vertical-align:middle;}
   // Boot: init() is async — called after DOM ready
   document.addEventListener('DOMContentLoaded', () => init());
 
-  async function runDiag() {
-    const el = document.getElementById('loginDiagResult');
-    el.style.display = 'block';
-    el.textContent = 'Probando…';
-    try {
-      const url = 'https://kjvftqsscttnghmlfncj.supabase.co/rest/v1/user_data?select=user_id&limit=0';
-      const key = 'sb_publishable_iaQ06UGlROdlqqOm-Lo8wg_31AcM2GN';
-      const r = await fetch(url, { headers: { 'apikey': key, 'Authorization': 'Bearer ' + key } });
-      const body = await r.text();
-      if (r.ok) {
-        el.style.color = 'var(--green)';
-        el.textContent = '✓ Supabase responde OK (HTTP ' + r.status + '). Si los datos no cargan, verifica que la tabla exista.';
-      } else {
-        el.style.color = 'var(--red)';
-        el.textContent = '✗ HTTP ' + r.status + ': ' + body.slice(0, 200);
-      }
-    } catch(e) {
-      el.style.color = 'var(--red)';
-      el.textContent = '✗ No se pudo conectar: ' + e.message;
-    }
-  }
 </script>
 </html>

@@ -3,48 +3,91 @@
 // ════════════════════════════════════════════════════
 //  LOGIN UI
 // ════════════════════════════════════════════════════
+let _authTab = 'login';  // 'login' | 'register'
+
+function switchAuthTab(tab) {
+  _authTab = tab;
+  const isLogin = tab === 'login';
+  document.getElementById('tabLogin').style.background    = isLogin ? 'var(--s1)' : 'transparent';
+  document.getElementById('tabLogin').style.color         = isLogin ? 'var(--text)' : 'var(--text2)';
+  document.getElementById('tabRegister').style.background = !isLogin ? 'var(--s1)' : 'transparent';
+  document.getElementById('tabRegister').style.color      = !isLogin ? 'var(--text)' : 'var(--text2)';
+  document.getElementById('loginBtn').textContent         = isLogin ? 'Iniciar sesión' : 'Crear cuenta';
+  document.getElementById('loginHint').textContent        = isLogin
+    ? 'Tus datos se sincronizan automáticamente entre dispositivos.'
+    : 'Recibirás un correo de confirmación. Después ya puedes iniciar sesión.';
+  document.getElementById('loginError').textContent = '';
+  document.getElementById('loginPassword').autocomplete = isLogin ? 'current-password' : 'new-password';
+}
+
 function showLoginScreen() {
   const el = document.getElementById('loginScreen');
   if (el) el.classList.remove('hidden');
 }
 
-function hideLoginScreen(username) {
+function hideLoginScreen(email) {
   const el = document.getElementById('loginScreen');
   if (el) el.classList.add('hidden');
   const badge = document.getElementById('userBadge');
-  if (badge && username) badge.textContent = '● ' + username;
+  if (badge && email) badge.textContent = '● ' + email;
 }
 
 async function doLogin() {
   const btn   = document.getElementById('loginBtn');
   const errEl = document.getElementById('loginError');
-  const user  = document.getElementById('loginUser').value.trim();
-  const pin   = document.getElementById('loginPin').value.trim();
+  const email = document.getElementById('loginEmail').value.trim();
+  const pass  = document.getElementById('loginPassword').value;
 
   errEl.textContent = '';
-  errEl.style.color = 'var(--gold)';
-  if (!user) { errEl.style.color='var(--red)'; errEl.textContent = 'Escribe un nombre de usuario'; return; }
-  if (!pin)  { errEl.style.color='var(--red)'; errEl.textContent = 'Escribe tu PIN'; return; }
+  errEl.style.color = 'var(--red)';
+  if (!email) { errEl.textContent = 'Escribe tu correo'; return; }
+  if (!pass)  { errEl.textContent = 'Escribe tu contraseña'; return; }
+  if (_authTab === 'register' && pass.length < 6) { errEl.textContent = 'La contraseña debe tener al menos 6 caracteres'; return; }
 
   btn.disabled = true;
-  btn.textContent = 'Conectando…';
-  errEl.textContent = 'Verificando Supabase…';
+  btn.textContent = _authTab === 'login' ? 'Entrando…' : 'Creando cuenta…';
+  errEl.style.color = 'var(--gold)';
+  errEl.textContent = 'Conectando con Supabase…';
 
   try {
-    const data = await window.DB.dbLogin(user, pin);
+    let data = null;
+    if (_authTab === 'register') {
+      const result = await window.DB.dbSignUp(email, pass);
+      if (result.needsConfirmation) {
+        errEl.style.color = 'var(--green)';
+        errEl.textContent = '✓ Cuenta creada. Revisa tu correo para confirmar, luego inicia sesión.';
+        switchAuthTab('login');
+        btn.disabled = false;
+        btn.textContent = 'Iniciar sesión';
+        return;
+      }
+      data = null; // cuenta nueva, sin datos
+    } else {
+      data = await window.DB.dbLogin(email, pass);
+    }
     applyLoaded(data);
-    hideLoginScreen(user);
+    hideLoginScreen(email);
     buildNav(); buildBizViews(); buildMpicker(); renderAll();
     window.DB.setSyncStatus('idle');
-    if (!data) showToast('Bienvenido ' + user + ' — cuenta nueva', 'ok');
-    else showToast('Bienvenido de nuevo, ' + user, 'ok');
+    showToast(_authTab === 'register' ? 'Cuenta creada. ¡Bienvenido!' : 'Bienvenido de nuevo', 'ok');
   } catch(e) {
     errEl.style.color = 'var(--red)';
-    errEl.textContent = e.message;
+    // Traducir errores comunes de Supabase Auth
+    const msg = e.message;
+    if (msg.includes('Invalid login credentials') || msg.includes('invalid_credentials'))
+      errEl.textContent = 'Correo o contraseña incorrectos';
+    else if (msg.includes('Email not confirmed'))
+      errEl.textContent = 'Confirma tu correo antes de entrar';
+    else if (msg.includes('User already registered'))
+      errEl.textContent = 'Ya existe una cuenta con ese correo';
+    else if (msg.includes('Password should be'))
+      errEl.textContent = 'La contraseña debe tener al menos 6 caracteres';
+    else
+      errEl.textContent = msg;
     console.error('[doLogin]', e);
   } finally {
     btn.disabled = false;
-    btn.textContent = 'Entrar';
+    btn.textContent = _authTab === 'login' ? 'Iniciar sesión' : 'Crear cuenta';
   }
 }
 
@@ -341,14 +384,31 @@ function buildBizViews() {
           <button class="btn" onclick="openOpModal('${biz.id}')">＋ Operación</button>
         </div>
       </div>
-      <!-- Month picker bar -->
-      <div class="biz-mpicker" id="bmp_${biz.id}">
-        <div class="biz-mpicker-chips" id="bmchips_${biz.id}"></div>
-        <div class="biz-mpicker-actions">
-          <button class="bmpick-btn" onclick="bmPickYear('${biz.id}')">Año actual</button>
-          <button class="bmpick-btn" onclick="bmPickNone('${biz.id}')">Todos</button>
+      <!-- Period filter bar -->
+      <div class="biz-mpicker" id="bmp_${biz.id}" style="gap:6px;flex-wrap:wrap;">
+        <!-- Mode pills -->
+        <div style="display:flex;gap:3px;flex-shrink:0;" id="bizPeriodPills_${biz.id}">
+          <button class="bmpick-btn bpill-active" id="bpp_all_${biz.id}"  onclick="setBizPeriod('${biz.id}','all')">Todo</button>
+          <button class="bmpick-btn" id="bpp_day_${biz.id}"   onclick="setBizPeriod('${biz.id}','day')">Día</button>
+          <button class="bmpick-btn" id="bpp_week_${biz.id}"  onclick="setBizPeriod('${biz.id}','week')">Semana</button>
+          <button class="bmpick-btn" id="bpp_month_${biz.id}" onclick="setBizPeriod('${biz.id}','month')">Mes</button>
         </div>
-        <span class="biz-mpicker-label" id="bmLabel_${biz.id}"></span>
+        <!-- Nav arrows (shown when not 'all') -->
+        <div id="bizPeriodNav_${biz.id}" style="display:none;align-items:center;gap:4px;">
+          <button class="month-btn" onclick="setBizPeriod('${biz.id}',getBizPeriod('${biz.id}').mode,-1)">‹</button>
+          <span id="bizPeriodLabel_${biz.id}" style="font-size:11px;color:var(--gold);font-family:'IBM Plex Mono',monospace;white-space:nowrap;min-width:180px;text-align:center;"></span>
+          <button class="month-btn" onclick="setBizPeriod('${biz.id}',getBizPeriod('${biz.id}').mode,1)">›</button>
+          <button class="bmpick-btn" onclick="setBizPeriod('${biz.id}',getBizPeriod('${biz.id}').mode)" style="font-size:9px;padding:2px 7px;">Hoy</button>
+        </div>
+        <!-- Month chips (shown only in 'all' mode) -->
+        <div id="bizChipsWrap_${biz.id}" style="display:flex;align-items:center;gap:4px;flex:1;flex-wrap:wrap;">
+          <div class="biz-mpicker-chips" id="bmchips_${biz.id}"></div>
+          <div class="biz-mpicker-actions">
+            <button class="bmpick-btn" onclick="bmPickYear('${biz.id}')">Año actual</button>
+            <button class="bmpick-btn" onclick="bmPickNone('${biz.id}')">Todos</button>
+          </div>
+          <span class="biz-mpicker-label" id="bmLabel_${biz.id}"></span>
+        </div>
       </div>
       <div class="stats" id="bs_${biz.id}"></div>
       <div class="card">
@@ -846,6 +906,7 @@ function getBizMonths(bizId) {
 
 // Per-biz expanded years state
 const bizMpickExpanded = new Map(); // bizId → Set<year>
+const bizPeriodFilter  = new Map(); // bizId → { mode: 'all'|'day'|'week'|'month', date: Date }
 function buildBizMpicker(bizId) {
   const chips = document.getElementById('bmchips_'+bizId);
   if(!chips) return;
@@ -935,11 +996,96 @@ function updateBmLabel(bizId) {
   }
 }
 
+
+// ════════════════════════════════════════════════════
+//  BIZ PERIOD FILTER (día / semana L-D / mes / todo)
+// ════════════════════════════════════════════════════
+function getBizPeriod(bizId) {
+  if (!bizPeriodFilter.has(bizId)) bizPeriodFilter.set(bizId, { mode: 'all', date: new Date() });
+  return bizPeriodFilter.get(bizId);
+}
+
+function setBizPeriod(bizId, mode, offsetDelta) {
+  const pf = getBizPeriod(bizId);
+  pf.mode = mode;
+  if (offsetDelta !== undefined) {
+    const d = new Date(pf.date);
+    if (mode === 'day')   d.setDate(d.getDate() + offsetDelta);
+    if (mode === 'week')  d.setDate(d.getDate() + offsetDelta * 7);
+    if (mode === 'month') d.setMonth(d.getMonth() + offsetDelta);
+    pf.date = d;
+  } else {
+    pf.date = new Date(); // reset to today
+  }
+  bizPeriodFilter.set(bizId, pf);
+  renderBiz(bizId);
+}
+
+// Returns [fromDateStr, toDateStr] for the current period
+function getBizPeriodRange(bizId) {
+  const pf = getBizPeriod(bizId);
+  const d  = new Date(pf.date);
+  if (pf.mode === 'day') {
+    const s = d.toISOString().slice(0, 10);
+    return [s, s];
+  }
+  if (pf.mode === 'week') {
+    // Monday of the week
+    const dow = d.getDay(); // 0=Sun
+    const monday = new Date(d);
+    monday.setDate(d.getDate() - (dow === 0 ? 6 : dow - 1));
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    return [monday.toISOString().slice(0, 10), sunday.toISOString().slice(0, 10)];
+  }
+  if (pf.mode === 'month') {
+    const y = d.getFullYear(), m = d.getMonth();
+    const from = new Date(y, m, 1).toISOString().slice(0, 10);
+    const to   = new Date(y, m + 1, 0).toISOString().slice(0, 10);
+    return [from, to];
+  }
+  return [null, null]; // all
+}
+
+function getBizPeriodLabel(bizId) {
+  const pf = getBizPeriod(bizId);
+  const MN = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const d  = new Date(pf.date);
+  if (pf.mode === 'day') {
+    const today = new Date().toISOString().slice(0,10);
+    const ds    = d.toISOString().slice(0,10);
+    if (ds === today) return 'Hoy · ' + d.toLocaleDateString('es',{weekday:'long'});
+    return d.toLocaleDateString('es',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+  }
+  if (pf.mode === 'week') {
+    const [from, to] = getBizPeriodRange(bizId);
+    const [fy,fm,fd] = from.split('-');
+    const [ty,tm,td] = to.split('-');
+    return `Semana · ${+fd} ${MN[+fm-1]} – ${+td} ${MN[+tm-1]} ${ty}`;
+  }
+  if (pf.mode === 'month') {
+    return MN[d.getMonth()] + ' ' + d.getFullYear();
+  }
+  return 'Todos los períodos';
+}
+
+function applyBizPeriodToOps(bizId, ops) {
+  const [from, to] = getBizPeriodRange(bizId);
+  if (!from) return ops;
+  return ops.filter(o => o.date && o.date >= from && o.date <= to);
+}
+
 function filterBizOps(bizId, ops) {
-  if(!bizSelectedMonths.has(bizId)) return ops;
-  const sel = bizSelectedMonths.get(bizId);
-  if(sel.size === 0) return ops;
-  return ops.filter(o => o.date && sel.has(o.date.slice(0,7)));
+  // Apply month-chip filter
+  let filtered = ops;
+  if(bizSelectedMonths.has(bizId)) {
+    const sel = bizSelectedMonths.get(bizId);
+    if(sel.size > 0) filtered = filtered.filter(o => o.date && sel.has(o.date.slice(0,7)));
+  }
+  // Apply day/week/month period filter (overrides month chips when active)
+  const pf = getBizPeriod(bizId);
+  if (pf.mode !== 'all') filtered = applyBizPeriodToOps(bizId, ops); // period filter replaces chip filter
+  return filtered;
 }
 
 function bmPickYear(bizId) {
@@ -962,8 +1108,28 @@ function bmPickNone(bizId) {
 // ════════════════════════════════════════════════════
 //  RENDER BIZ
 // ════════════════════════════════════════════════════
+function _updateBizPeriodUI(bizId) {
+  const pf   = getBizPeriod(bizId);
+  const modes = ['all','day','week','month'];
+  modes.forEach(m => {
+    const btn = document.getElementById('bpp_'+m+'_'+bizId);
+    if (btn) {
+      btn.style.background = pf.mode===m ? 'var(--gold)' : '';
+      btn.style.color      = pf.mode===m ? '#0c0e11'    : '';
+      btn.style.fontWeight = pf.mode===m ? '700'         : '';
+    }
+  });
+  const nav   = document.getElementById('bizPeriodNav_'+bizId);
+  const chips = document.getElementById('bizChipsWrap_'+bizId);
+  const lbl   = document.getElementById('bizPeriodLabel_'+bizId);
+  if (nav)   nav.style.display   = pf.mode !== 'all' ? 'flex' : 'none';
+  if (chips) chips.style.display = pf.mode === 'all' ? 'flex' : 'none';
+  if (lbl)   lbl.textContent     = getBizPeriodLabel(bizId);
+}
+
 function renderBiz(bizId) {
   const biz=S.businesses.find(b=>b.id===bizId); if(!biz) return;
+  _updateBizPeriodUI(bizId);
   const tipoF=document.getElementById('bf_t_'+bizId)?.value||'';
   let ops=filterBizOps(bizId, S.ops.filter(o=>o.bizId===bizId));
   if(tipoF) ops=ops.filter(o=>o.tipo===tipoF);
@@ -2164,7 +2330,7 @@ function renderComparativa() {
   if(selBizs.length===0){ document.getElementById('cmpCards').innerHTML='<p style="color:var(--text3);font-size:12px;padding:8px">Selecciona al menos un negocio</p>'; return; }
 
   const bizData=selBizs.map(b=>{
-    const ops=S.ops.filter(o=>o.bizId===b.id&&(!month||o.date?.startsWith(month)));
+    const ops=filterOpsByPeriod(S.ops.filter(o=>o.bizId===b.id), cmpPeriod);
     const vol =ops.reduce((s,o)=>s+opCobrado(o),0);
     const gan =ops.reduce((s,o)=>{const g=opGanancia(o);return g>0?s+g:s;},0);
     const gast=ops.reduce((s,o)=>{const g=opGanancia(o);return g<0?s+Math.abs(g):s;},0);
@@ -2907,14 +3073,21 @@ async function init(){
   if (window.DB) {
     const sess = window.DB.getSession();
     if (!sess) {
-      // No session → show login screen, stop init here
       showLoginScreen();
       return;
     }
-    // Session exists → load data from Supabase/localStorage
-    const data = await window.DB.dbLoad();
+    // Session exists → load data
+    let data = null;
+    try { data = await window.DB.dbLoad(); }
+    catch(e) {
+      console.warn('[init] dbLoad error:', e.message);
+      // Token inválido → forzar re-login
+      showLoginScreen();
+      return;
+    }
+    if (data === null && !sess) { showLoginScreen(); return; }
     applyLoaded(data);
-    hideLoginScreen(sess.username);
+    hideLoginScreen(sess.email);
   } else {
     load();
   }
