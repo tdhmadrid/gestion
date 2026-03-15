@@ -440,88 +440,83 @@ td{padding:10px 12px;font-size:12px;vertical-align:middle;}
 /* ════════════════════════════════════════
    MOBILE  (≤768px)
 ════════════════════════════════════════ */
+
+/* Botón hamburguesa — solo visible en mobile */
+#mobileMenuBtn{
+  display:none;
+  position:fixed;bottom:24px;right:20px;z-index:300;
+  width:52px;height:52px;border-radius:50%;
+  background:var(--gold);border:none;cursor:pointer;
+  color:#0c0e11;font-size:22px;
+  box-shadow:0 4px 20px rgba(0,0,0,.4);
+  align-items:center;justify-content:center;
+  transition:transform .15s, box-shadow .15s;
+}
+#mobileMenuBtn:active{ transform:scale(.93); }
+
+/* Drawer lateral — oculto en desktop */
+#mobileDrawer{ display:none; }
+
 @media(max-width:768px){
-  /* Layout base */
-  .app{flex-direction:column;}
-  aside{
-    display:flex;flex-direction:row;align-items:center;
-    width:100%;height:auto;min-height:0;
-    border-right:none;border-bottom:1px solid var(--border);
-    padding:0;overflow-x:auto;overflow-y:hidden;
-    position:sticky;top:0;z-index:200;
-    background:var(--s1);
-    flex-shrink:0;
-  }
-  /* Ocultar secciones del sidebar que no caben en barra horizontal */
-  aside .aside-logo,
-  aside .nav-label,
-  aside .aside-footer,
-  aside .month-selector,
-  aside .month-all-btn,
-  aside #yearSummaryPanel,
-  aside .mpicker-bar,
-  aside #mpickerBar{ display:none; }
-  /* Nav horizontal scrollable */
-  aside nav,
-  aside .nav-group{
-    display:flex;flex-direction:row;align-items:center;
-    padding:0;gap:0;flex-shrink:0;
-  }
-  .app > aside > *{ flex-shrink:0; }
-  .nav-item{
-    padding:10px 14px;white-space:nowrap;
-    border-left:none;border-bottom:3px solid transparent;
-    font-size:11px;
-  }
-  .nav-item.active{ border-bottom-color:var(--gold);border-left-color:transparent; }
-  /* Botón hamburguesa para sidebar completo */
-  #mobileMenuBtn{
-    display:flex;align-items:center;justify-content:center;
-    width:40px;height:40px;border:none;background:transparent;
-    cursor:pointer;color:var(--text2);font-size:18px;flex-shrink:0;
-    padding:0 8px;
-  }
-  /* Drawer lateral */
+  /* Sidebar completamente oculto — reemplazado por el drawer */
+  aside{ display:none !important; }
+
+  /* Botón flotante visible */
+  #mobileMenuBtn{ display:flex; }
+
+  /* Drawer */
   #mobileDrawer{
-    position:fixed;inset:0;z-index:500;display:none;
+    display:block;
+    position:fixed;inset:0;z-index:500;
+    pointer-events:none;
   }
-  #mobileDrawer.open{ display:block; }
+  #mobileDrawer.open{ pointer-events:all; }
   #mobileDrawerOverlay{
-    position:absolute;inset:0;background:rgba(0,0,0,.55);
+    position:absolute;inset:0;
+    background:rgba(0,0,0,.6);
+    opacity:0;transition:opacity .25s;
+    pointer-events:none;
+  }
+  #mobileDrawer.open #mobileDrawerOverlay{
+    opacity:1;pointer-events:all;
   }
   #mobileDrawerPanel{
-    position:absolute;left:0;top:0;bottom:0;width:280px;
+    position:absolute;left:0;top:0;bottom:0;width:290px;
     background:var(--s1);border-right:1px solid var(--border2);
-    overflow-y:auto;padding:16px 0 24px;
-    display:flex;flex-direction:column;gap:0;
+    overflow-y:auto;
+    display:flex;flex-direction:column;
+    transform:translateX(-100%);
+    transition:transform .25s cubic-bezier(.4,0,.2,1);
   }
+  #mobileDrawer.open #mobileDrawerPanel{
+    transform:translateX(0);
+  }
+
   /* Main */
   main{ padding:12px 10px; }
-  /* Stats grid */
+
+  /* Stats */
   .stats{ grid-template-columns:1fr 1fr; }
   .charts-row{ grid-template-columns:1fr; }
+
   /* Page header */
   .ph{ flex-direction:column;gap:10px;align-items:flex-start; }
   .ph-right{ flex-wrap:wrap;gap:6px;width:100%; }
-  .ph-right .sel, .ph-right .btn, .ph-right .btn-ghost, .ph-right .btn-outline{
+  .ph-right .sel,.ph-right .btn,.ph-right .btn-ghost,.ph-right .btn-outline{
     font-size:11px;padding:6px 10px;
   }
-  /* Tables — horizontal scroll */
+
+  /* Tables */
   .card{ overflow-x:auto; }
   table{ min-width:480px; }
-  /* Biz mpicker */
+
+  /* Misc */
   .biz-mpicker{ flex-wrap:wrap;padding:8px 10px; }
-  /* CMP nav */
   .cmp-nav{ flex-wrap:wrap; }
-  /* Modals */
   .modal-box{ width:95vw;max-height:92vh;margin:4vh auto; }
-  /* Period filter bar */
   .mpicker-bar{ padding:10px 12px; }
-  /* Comparativa grid */
   .cmp-grid{ grid-template-columns:1fr; }
-  /* Client grid */
   .client-grid{ grid-template-columns:1fr; }
-  /* Year card */
   .year-totals{ flex-wrap:wrap;gap:8px; }
   .year-biz-grid{ grid-template-columns:1fr; }
 }
@@ -749,9 +744,7 @@ td{padding:10px 12px;font-size:12px;vertical-align:middle;}
 </div>
 
 <aside>
-  <!-- Mobile menu button (visible only on mobile) -->
-  <button id="mobileMenuBtn" onclick="toggleMobileDrawer()" title="Menú" style="display:none">☰</button>
-  <div class="aside-logo" style="padding:10px 14px;flex-shrink:0;">Operaciones<small>Panel de Negocios</small></div>
+  <div class="aside-logo">Operaciones<small>Panel de Negocios</small></div>
   <div class="nav-group">
     <div class="nav-label">General</div>
     <div class="nav-item active" data-view="resumen" onclick="showView('resumen',this)">
@@ -1385,6 +1378,9 @@ td{padding:10px 12px;font-size:12px;vertical-align:middle;}
 </div>
 </div>
 
+
+<!-- ══ MOBILE FAB ══ -->
+<button id="mobileMenuBtn" onclick="toggleMobileDrawer()" title="Menú">☰</button>
 
 <!-- ══ MOBILE DRAWER ══ -->
 <div id="mobileDrawer">

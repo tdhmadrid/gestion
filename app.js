@@ -3094,11 +3094,9 @@ function _syncMobileDrawerNav() {
 
 // Show/hide mobile menu button based on viewport
 function _checkMobileBtn() {
-  const btn = document.getElementById('mobileMenuBtn');
-  if (!btn) return;
-  btn.style.display = window.innerWidth <= 768 ? 'flex' : 'none';
+  // FAB visibility handled purely by CSS media query — no JS needed
 }
-window.addEventListener('resize', _checkMobileBtn);
+// Keep resize listener for future use
 
 async function init(){
   loadTheme();
