@@ -98,7 +98,8 @@ async function doLogin() {
 //  STATE & STORAGE
 // ════════════════════════════════════════════════════
 const STORE = 'ops_v4';
-let S = { businesses:[], ops:[] };
+window.S = { businesses:[], ops:[] };
+let S = window.S;
 let selColor = '#f0c040';
 let curBizId = null;
 let curOpType = 'envio';
@@ -120,6 +121,7 @@ const OP_TYPES = [
 
 function applyLoaded(data) {
   if (data) S = data;
+  window.S = S;   // keep window.S in sync for db.js
   if(!S.businesses) S.businesses=[];
   if(!S.ops) S.ops=[];
   if(!S.clients) S.clients=[];
@@ -137,6 +139,7 @@ function applyLoaded(data) {
 
 function load() {
   try{ const r=localStorage.getItem(STORE); if(r) S=JSON.parse(r); }catch(e){}
+  window.S = S;   // sync
   applyLoaded(S);
 }
 
@@ -294,6 +297,7 @@ function resetData() {
   if(!confirm('⚠️ ¿Reiniciar TODOS los datos? Esta acción no se puede deshacer.')) return;
   if(!confirm('¿Confirmas que deseas borrar todos los negocios y operaciones?')) return;
   S = { businesses:[], ops:[] };
+  window.S = S;
   save();
   rebuildAll();
 }

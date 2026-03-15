@@ -185,7 +185,11 @@ function scheduleSync() {
 
 async function _doSync() {
   const data = window.S;
-  if (!data) { _ui('idle'); return; }
+  if (!data || typeof data !== 'object') {
+    console.warn('[db] _doSync: window.S not available');
+    _ui('idle');
+    return;
+  }
 
   // 1. Guardar local siempre
   try { localStorage.setItem(_STORE, JSON.stringify(data)); } catch(e) {}
@@ -195,14 +199,16 @@ async function _doSync() {
   if (!navigator.onLine) { _pending = true; _ui('offline'); return; }
 
   // 3. Subir a Supabase
+  console.log('[db] writing to Supabase, uid:', _uid, 'ops:', data.ops?.length);
   try {
     await _write(_uid, data);
     _pending   = false;
     _lastSaved = new Date();
+    console.log('[db] ✓ saved to Supabase');
     _ui('saved');
     setTimeout(() => _ui('idle'), 3000);
   } catch(e) {
-    console.error('[db] sync error:', e.message);
+    console.error('[db] ✗ sync error:', e.message);
     _pending = true;
     _ui('error', e.message.slice(0, 60));
   }
