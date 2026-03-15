@@ -1,184 +1,302 @@
 // ════════════════════════════════════════════════════
-//  db.js  v5  —  usa @supabase/supabase-js via CDN
-//  Cargado DESPUÉS de que el CDN script lo inyecta
-//  como window.supabase
+//  db.js  v6  —  Sin CDN externo, fetch directo
+//  Supabase Auth v1 API + REST v1
+//  Compatible con sb_publishable key
 // ════════════════════════════════════════════════════
+'use strict';
 
-const _SB_URL  = 'https://kjvftqsscttnghmlfncj.supabase.co';
-const _SB_KEY  = 'sb_publishable_iaQ06UGlROdlqqOm-Lo8wg_31AcM2GN';
-const _TABLE   = 'user_data';
-const STORE_KEY = 'ops_v4';
+const _URL   = 'https://kjvftqsscttnghmlfncj.supabase.co';
+const _KEY   = 'sb_publishable_iaQ06UGlROdlqqOm-Lo8wg_31AcM2GN';
+const _TABLE = 'user_data';
+const _STORE = 'ops_v4';
+const _SESS  = 'nb_session_v6';   // { access_token, refresh_token, user }
 
-// ── Cliente Supabase (se inicializa en dbInit) ─────
-let _sb   = null;
-let _user = null;
+// ════════════════════════════════════════════
+//  ESTADO INTERNO
+// ════════════════════════════════════════════
+let _tok  = null;   // access_token JWT
+let _rtok = null;   // refresh_token
+let _uid  = null;   // user id
+let _email = null;
 
-function dbInit() {
-  if (_sb) return;
-  // El CDN expone createClient en window.supabase
-  const { createClient } = window.supabase;
-  _sb = createClient(_SB_URL, _SB_KEY, {
-    auth: {
-      persistSession:    true,   // guarda sesión en localStorage automáticamente
-      autoRefreshToken:  true,   // refresca el JWT antes de que expire
-      detectSessionInUrl: false,
-    },
-  });
-  // Escuchar cambios de sesión
-  _sb.auth.onAuthStateChange((event, session) => {
-    _user = session?.user ?? null;
-    if (event === 'SIGNED_OUT') { localStorage.removeItem(STORE_KEY); }
-  });
+function _loadStoredSession() {
+  try {
+    const raw = localStorage.getItem(_SESS);
+    if (!raw) return;
+    const s = JSON.parse(raw);
+    _tok   = s.access_token  || null;
+    _rtok  = s.refresh_token || null;
+    _uid   = s.user?.id      || null;
+    _email = s.user?.email   || null;
+  } catch(e) {}
 }
+function _saveStoredSession(access, refresh, user) {
+  _tok   = access;
+  _rtok  = refresh;
+  _uid   = user?.id    || null;
+  _email = user?.email || null;
+  localStorage.setItem(_SESS, JSON.stringify({ access_token: access, refresh_token: refresh, user }));
+}
+function _clearStoredSession() {
+  _tok = _rtok = _uid = _email = null;
+  localStorage.removeItem(_SESS);
+  localStorage.removeItem(_STORE);
+}
+_loadStoredSession();
 
-// ── Sync status ────────────────────────────────────
-let _saveTimer    = null;
-let _lastSaved    = null;
-let _pendingFlush = false;
+// ════════════════════════════════════════════
+//  UI STATUS  (seguro: espera el DOM)
+// ════════════════════════════════════════════
+let _lastSaved = null;
 
-window.addEventListener('online',  () => { if (_pendingFlush) scheduleSync(); });
-window.addEventListener('offline', () => { _updateStatus('offline'); });
-
-function _updateStatus(status, msg) {
+function _ui(status, msg) {
   const el = document.getElementById('syncStatus');
   if (!el) return;
-  const map = {
-    idle:    ['',  'var(--text3)', ''],
-    saving:  ['⟳', 'var(--gold)',  'Guardando…'],
-    saved:   ['✓', 'var(--green)', 'Guardado ' + (_lastSaved
-                ? _lastSaved.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })
-                : '')],
-    error:   ['⚠', 'var(--red)',   msg || 'Error — datos guardados local'],
-    offline: ['◌', 'var(--text3)', 'Sin conexión · guardado local'],
+  const M = {
+    idle:    ['',  '#404a65', ''],
+    saving:  ['⟳', '#f0c040', 'Guardando…'],
+    saved:   ['✓', '#4debb0', 'Guardado ' + (_lastSaved
+               ? _lastSaved.toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'}) : '')],
+    error:   ['⚠', '#ff6b6b', msg || 'Error — guardado local'],
+    offline: ['◌', '#404a65', 'Sin conexión · local'],
   };
-  const [icon, col, txt] = map[status] || map.idle;
-  el.innerHTML = `<span style="color:${col};font-size:10px;font-family:'IBM Plex Mono',monospace">${icon} ${txt}</span>`;
+  const [icon, col, txt] = M[status] || M.idle;
+  el.innerHTML =
+    `<span style="color:${col};font-size:10px;font-family:'IBM Plex Mono',monospace;line-height:1.6">`
+    + icon + (txt ? ' ' + txt : '') + '</span>';
 }
-function setSyncStatus(s, m) { _updateStatus(s, m); }
+function setSyncStatus(s, m) { _ui(s, m); }
 
-// ── Leer datos del usuario ─────────────────────────
-async function _dataRead(userId) {
-  const { data, error } = await _sb
-    .from(_TABLE)
-    .select('payload')
-    .eq('user_id', userId)
-    .maybeSingle();
-  if (error) throw new Error(error.message);
-  return data?.payload ?? null;
-}
-
-// ── Escribir datos del usuario (upsert) ───────────
-async function _dataWrite(userId, payload) {
-  const { error } = await _sb
-    .from(_TABLE)
-    .upsert({ user_id: userId, payload, updated_at: new Date().toISOString() },
-            { onConflict: 'user_id' });
-  if (error) throw new Error(error.message);
+// ════════════════════════════════════════════
+//  FETCH HELPERS
+// ════════════════════════════════════════════
+function _h(tok, extra) {
+  return Object.assign({
+    'apikey':        _KEY,
+    'Authorization': 'Bearer ' + (tok || _KEY),
+    'Content-Type':  'application/json',
+  }, extra || {});
 }
 
-// ── Autosave con debounce 800ms ────────────────────
+async function _post(path, body, tok) {
+  const r = await fetch(_URL + path, {
+    method: 'POST',
+    headers: _h(tok),
+    body: JSON.stringify(body),
+  });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    const msg = d.error_description || d.msg || d.message || d.error || ('HTTP ' + r.status);
+    throw new Error(msg);
+  }
+  return d;
+}
+
+async function _get(path, tok) {
+  const r = await fetch(_URL + path, { method: 'GET', headers: _h(tok) });
+  if (!r.ok) {
+    const txt = await r.text().catch(() => '');
+    throw new Error('HTTP ' + r.status + ': ' + txt.slice(0, 100));
+  }
+  return r.json();
+}
+
+// ════════════════════════════════════════════
+//  TOKEN REFRESH
+// ════════════════════════════════════════════
+async function _refresh() {
+  if (!_rtok) throw new Error('Sin refresh token');
+  const d = await _post('/auth/v1/token?grant_type=refresh_token',
+                        { refresh_token: _rtok });
+  _saveStoredSession(d.access_token, d.refresh_token, d.user);
+  return d.access_token;
+}
+
+// Token válido: si falla con 401 refresca una vez
+async function _validToken() {
+  if (!_tok) throw new Error('No autenticado');
+  return _tok;
+}
+
+// ════════════════════════════════════════════
+//  DATA READ / WRITE
+// ════════════════════════════════════════════
+async function _read(uid) {
+  const tok = await _validToken();
+  const doRead = async (t) => {
+    const rows = await _get(
+      `/rest/v1/${_TABLE}?user_id=eq.${encodeURIComponent(uid)}&select=payload`,
+      t
+    );
+    return Array.isArray(rows) && rows.length ? rows[0].payload : null;
+  };
+  try {
+    return await doRead(tok);
+  } catch(e) {
+    if (e.message.startsWith('HTTP 401')) {
+      const newTok = await _refresh();
+      return await doRead(newTok);
+    }
+    throw e;
+  }
+}
+
+async function _write(uid, payload) {
+  const tok = await _validToken();
+  const body = JSON.stringify({
+    user_id:    uid,
+    payload:    payload,
+    updated_at: new Date().toISOString(),
+  });
+  const doWrite = async (t) => {
+    const r = await fetch(_URL + '/rest/v1/' + _TABLE, {
+      method:  'POST',
+      headers: _h(t, { 'Prefer': 'resolution=merge-duplicates,return=minimal' }),
+      body,
+    });
+    if (!r.ok) {
+      const txt = await r.text().catch(() => '');
+      throw new Error('HTTP ' + r.status + ': ' + txt.slice(0, 120));
+    }
+  };
+  try {
+    await doWrite(tok);
+  } catch(e) {
+    if (e.message.startsWith('HTTP 401')) {
+      const newTok = await _refresh();
+      await doWrite(newTok);
+    } else throw e;
+  }
+}
+
+// ════════════════════════════════════════════
+//  AUTOSAVE  (debounce 800ms)
+// ════════════════════════════════════════════
+let _timer   = null;
+let _pending = false;
+
+window.addEventListener('online', () => { if (_pending && _uid) scheduleSync(); });
+
 function scheduleSync() {
-  if (_saveTimer) clearTimeout(_saveTimer);
-  _updateStatus('saving');
-  _saveTimer = setTimeout(_doSync, 800);
+  if (_timer) clearTimeout(_timer);
+  _ui('saving');
+  _timer = setTimeout(_doSync, 800);
 }
 
 async function _doSync() {
   const data = window.S;
-  if (!data) { _updateStatus('idle'); return; }
+  if (!data) { _ui('idle'); return; }
 
-  // Siempre local primero
-  try { localStorage.setItem(STORE_KEY, JSON.stringify(data)); } catch(e) {}
+  // 1. Guardar local siempre
+  try { localStorage.setItem(_STORE, JSON.stringify(data)); } catch(e) {}
 
-  if (!navigator.onLine) { _pendingFlush = true; _updateStatus('offline'); return; }
+  // 2. Sin uid o sin conexión → marcar pendiente
+  if (!_uid) { _ui('idle'); return; }
+  if (!navigator.onLine) { _pending = true; _ui('offline'); return; }
 
-  const sess = await _sb.auth.getSession();
-  const uid  = sess?.data?.session?.user?.id;
-  if (!uid)  { _updateStatus('idle'); return; }
-
+  // 3. Subir a Supabase
   try {
-    await _dataWrite(uid, data);
-    _pendingFlush = false;
+    await _write(_uid, data);
+    _pending   = false;
     _lastSaved = new Date();
-    _updateStatus('saved');
-    setTimeout(() => _updateStatus('idle'), 3000);
+    _ui('saved');
+    setTimeout(() => _ui('idle'), 3000);
   } catch(e) {
-    console.error('[db] sync:', e.message);
-    _pendingFlush = true;
-    _updateStatus('error', e.message.slice(0, 60));
+    console.error('[db] sync error:', e.message);
+    _pending = true;
+    _ui('error', e.message.slice(0, 60));
   }
 }
 
-// ── Registro ───────────────────────────────────────
+// ════════════════════════════════════════════
+//  AUTH
+// ════════════════════════════════════════════
 async function dbSignUp(email, password) {
-  const { data, error } = await _sb.auth.signUp({ email, password });
-  if (error) throw new Error(error.message);
-  _user = data.user;
-  // Si devuelve sesión inmediata (sin confirmación de email)
-  if (data.session) {
-    return { user: data.user, needsConfirmation: false };
+  const d = await _post('/auth/v1/signup', { email, password });
+  if (d.access_token) {
+    _saveStoredSession(d.access_token, d.refresh_token, d.user);
+    return { needsConfirmation: false };
   }
-  return { user: data.user, needsConfirmation: true };
+  return { needsConfirmation: true };
 }
 
-// ── Login ──────────────────────────────────────────
 async function dbLogin(email, password) {
-  const { data, error } = await _sb.auth.signInWithPassword({ email, password });
-  if (error) throw new Error(error.message);
-  _user = data.user;
+  const d = await _post('/auth/v1/token?grant_type=password', { email, password });
+  _saveStoredSession(d.access_token, d.refresh_token, d.user);
   // Cargar datos remotos
   let remote = null;
-  try { remote = await _dataRead(data.user.id); } catch(e) { console.warn('[db] post-login load:', e.message); }
-  if (remote) localStorage.setItem(STORE_KEY, JSON.stringify(remote));
+  try { remote = await _read(d.user.id); } catch(e) {
+    console.warn('[db] post-login read failed:', e.message);
+  }
+  if (remote) localStorage.setItem(_STORE, JSON.stringify(remote));
   return remote;
 }
 
-// ── Carga al reabrir (sesión guardada por el SDK) ──
 async function dbLoad() {
-  // El SDK de Supabase restaura la sesión automáticamente desde localStorage
-  const { data: { session } } = await _sb.auth.getSession();
-  if (!session) return null;
-  _user = session.user;
-  // Cargar datos
+  if (!_tok || !_uid) return null;
+  let remote = null;
   try {
-    const remote = await _dataRead(session.user.id);
-    if (remote) { localStorage.setItem(STORE_KEY, JSON.stringify(remote)); return remote; }
+    remote = await _read(_uid);
   } catch(e) {
-    console.warn('[db] dbLoad error:', e.message);
-    // Fallback local
-    try { const l = localStorage.getItem(STORE_KEY); if(l) return JSON.parse(l); } catch(e2) {}
+    // Token inválido → intentar refresh
+    try {
+      await _refresh();
+      remote = await _read(_uid);
+    } catch(e2) {
+      console.warn('[db] dbLoad failed after refresh:', e2.message);
+      _clearStoredSession();
+      return null;   // forzar re-login
+    }
   }
-  // Usuario existe pero sin datos remotos aún — usar local
-  try { const l = localStorage.getItem(STORE_KEY); if(l) return JSON.parse(l); } catch(e) {}
+  if (remote) { localStorage.setItem(_STORE, JSON.stringify(remote)); return remote; }
+  // Sin datos remotos → usar local
+  try { const l = localStorage.getItem(_STORE); if(l) return JSON.parse(l); } catch(e) {}
   return null;
 }
 
-// ── Logout ─────────────────────────────────────────
 async function dbLogout() {
-  if (_saveTimer) clearTimeout(_saveTimer);
-  await _sb.auth.signOut().catch(() => {});
-  localStorage.removeItem(STORE_KEY);
+  if (_timer) clearTimeout(_timer);
+  try {
+    if (_tok) await _post('/auth/v1/logout', {}, _tok).catch(() => {});
+  } catch(e) {}
+  _clearStoredSession();
   location.reload();
 }
 
-// ── Sesión activa ──────────────────────────────────
 function getSession() {
-  if (!_user) return null;
-  return { userId: _user.id, email: _user.email };
+  if (!_uid || !_email) return null;
+  return { userId: _uid, email: _email };
 }
 
-// ── Diagnóstico ────────────────────────────────────
+function dbInit() { /* sin SDK, no necesita init */ }
+
+// ════════════════════════════════════════════
+//  DIAGNÓSTICO  (DB.diagnose() en consola)
+// ════════════════════════════════════════════
 async function _diagnose() {
-  console.group('[DB v5 Diagnóstico]');
-  const { data: { session } } = await _sb.auth.getSession();
-  console.log('Sesión:', session ? session.user.email : 'ninguna');
-  if (session) {
+  console.group('[DB v6]');
+  console.log('uid:', _uid);
+  console.log('email:', _email);
+  console.log('token:', _tok ? _tok.slice(0,30)+'…' : 'none');
+  console.log('online:', navigator.onLine);
+  if (_uid && _tok) {
     try {
-      const d = await _dataRead(session.user.id);
-      console.log('Datos remotos:', d ? 'OK (' + JSON.stringify(d).slice(0,60) + '…)' : 'vacío (usuario nuevo)');
-    } catch(e) { console.error('Error lectura:', e.message); }
+      const d = await _read(_uid);
+      console.log('remote data:', d ? '✓ ' + (d.ops?.length||0) + ' ops' : 'vacío');
+    } catch(e) { console.error('read error:', e.message); }
+    // Test write
+    try {
+      await _write(_uid, window.S || {});
+      console.log('write test: ✓');
+    } catch(e) { console.error('write error:', e.message); }
   }
   console.groupEnd();
 }
 
-window.DB = { dbInit, scheduleSync, dbLoad, dbLogin, dbSignUp, dbLogout, getSession, setSyncStatus, diagnose: _diagnose };
+// ════════════════════════════════════════════
+//  API PÚBLICA
+// ════════════════════════════════════════════
+window.DB = {
+  dbInit, scheduleSync, dbLoad, dbLogin, dbSignUp, dbLogout,
+  getSession, setSyncStatus, diagnose: _diagnose,
+};
