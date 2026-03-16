@@ -545,9 +545,15 @@ function opCobrado(op){
 function drawDonut(canvasId, segments, centerVal, centerLabel) {
   const wrap = document.getElementById(canvasId);
   if(!wrap) return;
+  // Use container size — CSS controls width/height via .donut-wrap
   const size=120, r=46, cx=60, cy=60, strokeW=14;
   const total=segments.reduce((s,g)=>s+g.val,0);
-  if(total===0){ wrap.innerHTML=`<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"><circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--border)" stroke-width="${strokeW}"/></svg>`; return; }
+  // SVG uses viewBox only — width/height 100% to fill .donut-wrap
+  const svgAttrs = `viewBox="0 0 ${size} ${size}" style="width:100%;height:100%;transform:rotate(-90deg)"`;
+  if(total===0){
+    wrap.innerHTML=`<svg ${svgAttrs}><circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--border)" stroke-width="${strokeW}"/></svg>`;
+    return;
+  }
   let parts=''; let offset=0;
   const circ=2*Math.PI*r;
   segments.forEach(seg=>{
@@ -556,7 +562,7 @@ function drawDonut(canvasId, segments, centerVal, centerLabel) {
     parts+=`<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${seg.color}" stroke-width="${strokeW}" stroke-dasharray="${dash} ${circ}" stroke-dashoffset="${-offset}" stroke-linecap="butt"/>`;
     offset+=dash;
   });
-  wrap.innerHTML=`<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" style="transform:rotate(-90deg)">${parts}</svg>`;
+  wrap.innerHTML=`<svg ${svgAttrs}>${parts}</svg>`;
 }
 
 
@@ -737,17 +743,17 @@ function renderResumen() {
     chartsEl.innerHTML=`
       <div class="donut-card">
         <div class="donut-title">Ganancia por Negocio</div>
-        <div class="donut-wrap" id="dn1"><svg width="120" height="120"></svg></div>
+        <div class="donut-wrap" id="dn1"></div>
         <div class="donut-legend">${bizSegs.slice(0,5).map(s=>`<div class="dl-item"><span class="dl-dot" style="background:${s.color}"></span><span class="dl-name">${s.name}</span><span class="dl-val">${fmt(s.val)}</span></div>`).join('')}</div>
       </div>
       <div class="donut-card">
         <div class="donut-title">Por Tipo de Operación</div>
-        <div class="donut-wrap" id="dn2"><svg width="120" height="120"></svg></div>
+        <div class="donut-wrap" id="dn2"></div>
         <div class="donut-legend">${tipoSegs.map(s=>`<div class="dl-item"><span class="dl-dot" style="background:${s.color}"></span><span class="dl-name">${s.name}</span><span class="dl-val">${fmt(s.val)}</span></div>`).join('')}</div>
       </div>
       <div class="donut-card">
         <div class="donut-title">Balance General</div>
-        <div class="donut-wrap" id="dn3"><svg width="120" height="120"></svg></div>
+        <div class="donut-wrap" id="dn3"></div>
         <div class="donut-legend">
           <div class="dl-item"><span class="dl-dot" style="background:var(--green)"></span><span class="dl-name">Ganancias</span><span class="dl-val">${fmt(gan)}</span></div>
           <div class="dl-item"><span class="dl-dot" style="background:var(--red)"></span><span class="dl-name">Gastos</span><span class="dl-val">${fmt(gast)}</span></div>
@@ -3061,42 +3067,50 @@ function renderAll(){
 function toggleMobileDrawer() {
   const d = document.getElementById('mobileDrawer');
   if (!d) return;
-  const isOpen = d.classList.toggle('open');
-  if (isOpen) _syncMobileDrawerNav();
+  const opening = !d.classList.contains('open');
+  d.classList.toggle('open');
+  // Prevent body scroll when drawer is open
+  document.body.style.overflow = opening ? 'hidden' : '';
+  if (opening) _syncMobileDrawerNav();
 }
 
 function _syncMobileDrawerNav() {
   const target = document.getElementById('mobileDrawerNav');
   if (!target) return;
-  // Clone the sidebar nav groups into the drawer
+
+  // Clone sidebar nav groups
   const groups = document.querySelectorAll('aside .nav-group');
   target.innerHTML = '';
   groups.forEach(g => {
     const clone = g.cloneNode(true);
-    // Show labels in drawer
-    const lbl = clone.querySelector('.nav-label');
-    if (lbl) lbl.style.display = '';
-    // Wire up nav clicks to also close drawer
+    // Ensure nav labels show
+    clone.querySelectorAll('.nav-label').forEach(l => l.style.display = '');
+    // Hide action buttons that don't work well in drawer
+    clone.querySelectorAll('.nav-item-actions').forEach(a => a.remove());
+    // Close drawer on nav click
     clone.querySelectorAll('.nav-item, .nav-sub-item').forEach(item => {
-      item.addEventListener('click', () => toggleMobileDrawer());
+      item.addEventListener('click', () => {
+        document.body.style.overflow = '';
+        document.getElementById('mobileDrawer').classList.remove('open');
+      });
     });
     target.appendChild(clone);
   });
+
   // Sync user badge
   const badge = document.getElementById('userBadge');
   const mobileBadge = document.getElementById('mobileUserBadge');
   if (badge && mobileBadge) mobileBadge.textContent = badge.textContent;
+
   // Sync month label
   const ml = document.getElementById('monthLabel');
   const mlm = document.getElementById('monthLabelMobile');
   if (ml && mlm) mlm.textContent = ml.textContent;
 }
 
-// Show/hide mobile menu button based on viewport
 function _checkMobileBtn() {
-  // FAB visibility handled purely by CSS media query — no JS needed
+  // FAB visibility handled by CSS media query
 }
-// Keep resize listener for future use
 
 async function init(){
   loadTheme();

@@ -199,8 +199,8 @@ td{padding:10px 12px;font-size:12px;vertical-align:middle;}
 .charts-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:16px;}
 .donut-card{background:var(--s1);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center;transition:var(--transition);}
 .donut-title{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px;}
-.donut-wrap{position:relative;width:120px;height:120px;margin:0 auto 12px;}
-.donut-wrap svg{transform:rotate(-90deg);}
+.donut-wrap{position:relative;width:120px;height:120px;margin:0 auto 12px;flex-shrink:0;}
+.donut-wrap svg{width:100%;height:100%;}
 .donut-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;}
 .donut-center .dv{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:500;line-height:1;}
 .donut-center .dl{font-size:9px;color:var(--text3);margin-top:2px;}
@@ -535,25 +535,34 @@ td{padding:10px 12px;font-size:12px;vertical-align:middle;}
   /* ── Toolbar: hide reset button on mobile ── */
   .toolbar{ display:none; }
 
-  /* ── Period picker: clean single row ── */
+  /* ── Period picker ── */
   .mpicker-bar{
-    display:flex;align-items:center;gap:6px;flex-wrap:wrap;
-    padding:8px 14px;
+    flex-direction:column;align-items:flex-start;
+    gap:6px;padding:8px 14px;
     background:var(--s2);
     border-bottom:1px solid var(--border);
     border-radius:0;border-left:none;border-right:none;
     margin-bottom:0;
   }
-  .mpicker-label{
-    font-size:8px;letter-spacing:1.2px;font-weight:700;
-    color:var(--text3);flex-shrink:0;
+  /* Row 1: label + action buttons */
+  .mpicker-bar > .mpicker-label{ display:block;margin-bottom:0; }
+  /* All chips and actions in one wrapping row */
+  .mpicker-chips{
+    display:flex;flex-wrap:wrap;gap:4px;width:100%;
   }
-  .mpicker-chips{ gap:4px;flex:1; }
-  .mchip{ padding:3px 9px;font-size:10px;border-radius:16px; }
-  .mchip-year{ font-size:9px;padding:3px 8px; }
-  .mpicker-actions{ gap:3px;flex-shrink:0; }
-  .mpick-btn{ font-size:9px;padding:3px 7px; }
-  #mpickLabel{ font-size:9px; }
+  .mpicker-actions{
+    display:flex;gap:4px;width:100%;
+  }
+  .mpick-btn{
+    font-size:10px;padding:4px 10px;flex:1;text-align:center;
+    border-radius:8px;
+  }
+  .mchip{ padding:4px 10px;font-size:10px;border-radius:16px; }
+  .mchip-year{ font-size:9px;padding:4px 9px; }
+  #mpickLabel{
+    font-size:10px;color:var(--gold);
+    width:100%;padding-top:2px;
+  }
 
   /* ── Stats: 2 col compact ── */
   .stats{
@@ -572,17 +581,22 @@ td{padding:10px 12px;font-size:12px;vertical-align:middle;}
   /* ── Charts: 2 col compact ── */
   .charts-row{
     display:grid;grid-template-columns:1fr 1fr;
-    gap:6px;margin:0 14px 10px;
+    gap:8px;margin:0 14px 12px;
   }
-  .donut-card{ padding:10px 8px;border-radius:12px; }
-  .donut-title{ font-size:8px;margin-bottom:6px;letter-spacing:.5px; }
-  .donut-wrap{ width:72px;height:72px;margin:0 auto 8px; }
-  .donut-center .dv{ font-size:10px; }
+  .donut-card{
+    padding:12px 10px;border-radius:12px;
+    display:flex;flex-direction:column;align-items:center;
+    overflow:hidden;min-width:0;
+  }
+  .donut-title{ font-size:8px;margin-bottom:8px;letter-spacing:.5px;width:100%;text-align:center; }
+  .donut-wrap{ width:80px;height:80px;margin:0 auto 8px;flex-shrink:0; }
+  .donut-center .dv{ font-size:9px; }
   .donut-center .dl{ font-size:7px; }
-  .donut-legend{ gap:3px; }
-  .dl-item{ font-size:9px; }
-  .dl-dot{ width:6px;height:6px;margin-right:3px; }
-  .dl-val{ font-size:9px; }
+  .donut-legend{ gap:3px;width:100%; }
+  .dl-item{ font-size:9px;gap:4px; }
+  .dl-dot{ width:6px;height:6px;margin-right:3px;flex-shrink:0; }
+  .dl-name{ font-size:9px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+  .dl-val{ font-size:9px;white-space:nowrap;flex-shrink:0; }
 
   /* ── Biz overview cards: 2 col ── */
   .biz-grid{
@@ -607,13 +621,9 @@ td{padding:10px 12px;font-size:12px;vertical-align:middle;}
   .card-head .sel,.card-head select{ font-size:10px;padding:3px 6px; }
 
   /* ── Tables: touch scroll ── */
-  .card > table,
-  .card > div > table,
-  table{
-    display:block;
-    overflow-x:auto;
-    -webkit-overflow-scrolling:touch;
-    min-width:440px;
+  .card{ overflow-x:auto; }
+  .card table{
+    min-width:420px;
   }
   td{ padding:8px 10px;font-size:11px; }
   thead th{ padding:6px 10px;font-size:8px; }
@@ -837,8 +847,8 @@ td{padding:10px 12px;font-size:12px;vertical-align:middle;}
 .mchip-year.active{background:var(--gold);border-color:var(--gold);color:#0c0e11;}
 .mchip-year .yr-arrow{font-size:8px;transition:transform .2s;display:inline-block;}
 .mchip-year.open .yr-arrow{transform:rotate(90deg);}
-.mchip-months-group{display:inline-flex;gap:4px;flex-wrap:wrap;overflow:hidden;max-height:0;max-width:0;opacity:0;transition:max-height .25s ease,opacity .2s ease,max-width .3s ease;vertical-align:middle;}
-.mchip-months-group.open{max-height:80px;max-width:600px;opacity:1;}
+.mchip-months-group{display:none;gap:4px;flex-wrap:wrap;}
+.mchip-months-group.open{display:inline-flex;}
 /* ── Comparativa content cards ── */
 .cmp-period-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;margin-bottom:20px;}
 .cmp-period-card{background:var(--s1);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
