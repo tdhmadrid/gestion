@@ -535,34 +535,32 @@ td{padding:10px 12px;font-size:12px;vertical-align:middle;}
   /* ── Toolbar: hide reset button on mobile ── */
   .toolbar{ display:none; }
 
-  /* ── Period picker ── */
+  /* ── Period picker mobile ── */
   .mpicker-bar{
-    flex-direction:column;align-items:flex-start;
-    gap:6px;padding:8px 14px;
+    flex-direction:column;align-items:stretch;
+    gap:0;padding:10px 14px 12px;
     background:var(--s2);
     border-bottom:1px solid var(--border);
     border-radius:0;border-left:none;border-right:none;
     margin-bottom:0;
   }
-  /* Row 1: label + action buttons */
-  .mpicker-bar > .mpicker-label{ display:block;margin-bottom:0; }
-  /* All chips and actions in one wrapping row */
+  .mpicker-bar > .mpicker-label{
+    font-size:8px;letter-spacing:1.5px;margin-bottom:8px;
+  }
+  /* mpickerChips contains the year-row + month grid built by JS */
   .mpicker-chips{
-    display:flex;flex-wrap:wrap;gap:4px;width:100%;
+    display:flex;flex-direction:column;gap:6px;width:100%;
   }
-  .mpicker-actions{
-    display:flex;gap:4px;width:100%;
-  }
+  /* Hide the actions row (Año actual / Limpiar) — handled inline in mobile picker */
+  .mpicker-actions{ display:none; }
+  /* Hide the selected label — shown in sticky header instead */
+  .mpick-selected-label{ display:none; }
+  /* mpick-btn used in year row */
   .mpick-btn{
-    font-size:10px;padding:4px 10px;flex:1;text-align:center;
-    border-radius:8px;
+    font-size:11px;padding:4px 9px;
+    border-radius:7px;
   }
-  .mchip{ padding:4px 10px;font-size:10px;border-radius:16px; }
-  .mchip-year{ font-size:9px;padding:4px 9px; }
-  #mpickLabel{
-    font-size:10px;color:var(--gold);
-    width:100%;padding-top:2px;
-  }
+  .mchip{ padding:6px 4px;font-size:11px;border-radius:8px; }
 
   /* ── Stats: 2 col compact ── */
   .stats{

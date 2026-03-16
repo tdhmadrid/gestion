@@ -580,33 +580,40 @@ function buildMpicker() {
   if(!chips) return;
   chips.innerHTML = '';
   if(allMonths.length === 0) { updateMpickLabel(); return; }
+
+  const isMobile = window.innerWidth <= 768;
+  if(isMobile) {
+    _buildMpickerMobile(chips, allMonths);
+  } else {
+    _buildMpickerDesktop(chips, allMonths);
+  }
+  updateMpickLabel();
+}
+
+// ── Desktop: year pill + collapsible month chips ──
+function _buildMpickerDesktop(chips, allMonths) {
   const years = [...new Set(allMonths.map(m=>m.slice(0,4)))];
   const MN = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-  // Auto-expand latest year if nothing expanded yet
   if(mpickExpanded.size === 0 && years.length) mpickExpanded.add(years[years.length-1]);
 
-  years.forEach((y, yi) => {
+  years.forEach(y => {
     const yMonths = allMonths.filter(m=>m.startsWith(y));
-    const yAll  = yMonths.length > 0 && yMonths.every(m=>selectedMonths.has(m));
+    const yAll  = yMonths.every(m=>selectedMonths.has(m));
     const ySome = yMonths.some(m=>selectedMonths.has(m));
     const isOpen = mpickExpanded.has(y);
 
-    // Year pill button
     const wrap = document.createElement('span');
     wrap.style.cssText = 'display:inline-flex;align-items:center;gap:4px;margin-right:6px;';
 
     const yBtn = document.createElement('button');
     yBtn.className = 'mchip-year' + (isOpen?' open':'') + (yAll?' active':ySome?' partial':'');
     yBtn.innerHTML = y + ' <span class="yr-arrow">›</span>';
-    yBtn.title = 'Click para expandir · Seleccionar todo ' + y;
-    yBtn.onclick = (e) => {
+    yBtn.onclick = e => {
       e.stopPropagation();
-      if(mpickExpanded.has(y)) mpickExpanded.delete(y);
-      else mpickExpanded.add(y);
+      mpickExpanded.has(y) ? mpickExpanded.delete(y) : mpickExpanded.add(y);
       buildMpicker();
     };
-    // Long-press / dblclick = select all year
-    yBtn.ondblclick = (e) => {
+    yBtn.ondblclick = e => {
       e.stopPropagation();
       if(yAll) yMonths.forEach(m=>selectedMonths.delete(m));
       else yMonths.forEach(m=>selectedMonths.add(m));
@@ -614,26 +621,91 @@ function buildMpicker() {
     };
     wrap.appendChild(yBtn);
 
-    // Month chips group (collapsible)
     const grp = document.createElement('span');
     grp.className = 'mchip-months-group' + (isOpen?' open':'');
     yMonths.forEach(m => {
       const [, mo] = m.split('-');
       const chip = document.createElement('button');
-      chip.className = 'mchip' + (selectedMonths.has(m) ? ' active' : '');
+      chip.className = 'mchip' + (selectedMonths.has(m)?' active':'');
       chip.textContent = MN[+mo-1];
-      chip.dataset.month = m;
-      chip.onclick = () => {
-        if(selectedMonths.has(m)) selectedMonths.delete(m);
-        else selectedMonths.add(m);
-        buildMpicker(); renderResumen();
-      };
+      chip.onclick = () => { toggleMpick(m); };
       grp.appendChild(chip);
     });
     wrap.appendChild(grp);
     chips.appendChild(wrap);
   });
-  updateMpickLabel();
+}
+
+// ── Mobile: year selector with arrows + month grid ──
+let _mpickMobileYear = null;
+function _buildMpickerMobile(chips, allMonths) {
+  const years = [...new Set(allMonths.map(m=>m.slice(0,4)))].sort();
+  const MN = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+  // Default to latest year
+  if(!_mpickMobileYear || !years.includes(_mpickMobileYear)) {
+    _mpickMobileYear = years[years.length-1];
+  }
+
+  const yMonths = allMonths.filter(m=>m.startsWith(_mpickMobileYear));
+  const yi = years.indexOf(_mpickMobileYear);
+
+  // ── Year row: ‹ 2025 › + "Todo el año" ──
+  const yearRow = document.createElement('div');
+  yearRow.style.cssText = 'display:flex;align-items:center;gap:0;width:100%;margin-bottom:6px;';
+
+  const prevY = document.createElement('button');
+  prevY.className = 'mpick-btn';
+  prevY.textContent = '‹';
+  prevY.disabled = yi === 0;
+  prevY.style.cssText = 'padding:4px 10px;opacity:' + (yi===0?'.3':'1');
+  prevY.onclick = () => { _mpickMobileYear = years[yi-1]; buildMpicker(); };
+
+  const yearLbl = document.createElement('span');
+  yearLbl.style.cssText = 'flex:1;text-align:center;font-family:"IBM Plex Mono",monospace;font-size:13px;font-weight:700;color:var(--text);';
+  yearLbl.textContent = _mpickMobileYear;
+
+  const nextY = document.createElement('button');
+  nextY.className = 'mpick-btn';
+  nextY.textContent = '›';
+  nextY.disabled = yi === years.length-1;
+  nextY.style.cssText = 'padding:4px 10px;opacity:' + (yi===years.length-1?'.3':'1');
+  nextY.onclick = () => { _mpickMobileYear = years[yi+1]; buildMpicker(); };
+
+  // "Seleccionar año" toggle
+  const yAll = yMonths.every(m=>selectedMonths.has(m));
+  const selYearBtn = document.createElement('button');
+  selYearBtn.className = 'mpick-btn' + (yAll?' active':'');
+  selYearBtn.textContent = yAll ? '✓ Año' : 'Año';
+  if(yAll) selYearBtn.style.cssText = 'background:var(--gold);color:#0c0e11;border-color:var(--gold);font-weight:700;';
+  selYearBtn.onclick = () => {
+    if(yAll) yMonths.forEach(m=>selectedMonths.delete(m));
+    else yMonths.forEach(m=>selectedMonths.add(m));
+    buildMpicker(); renderResumen();
+  };
+
+  yearRow.appendChild(prevY);
+  yearRow.appendChild(yearLbl);
+  yearRow.appendChild(nextY);
+  yearRow.appendChild(selYearBtn);
+  chips.appendChild(yearRow);
+
+  // ── Month chips grid: 4 cols ──
+  const grid = document.createElement('div');
+  grid.style.cssText = 'display:grid;grid-template-columns:repeat(4,1fr);gap:5px;width:100%;';
+
+  yMonths.forEach(m => {
+    const [, mo] = m.split('-');
+    const chip = document.createElement('button');
+    const active = selectedMonths.has(m);
+    chip.className = 'mchip' + (active?' active':'');
+    chip.style.cssText = 'text-align:center;padding:6px 4px;font-size:11px;border-radius:8px;width:100%;' +
+      (active ? 'background:var(--gold);color:#0c0e11;border-color:var(--gold);font-weight:700;' : '');
+    chip.textContent = MN[+mo-1];
+    chip.onclick = () => { toggleMpick(m); };
+    grid.appendChild(chip);
+  });
+  chips.appendChild(grid);
 }
 
 function toggleMpick(m) {
@@ -3068,48 +3140,101 @@ function toggleMobileDrawer() {
   const d = document.getElementById('mobileDrawer');
   if (!d) return;
   const opening = !d.classList.contains('open');
-  d.classList.toggle('open');
-  // Prevent body scroll when drawer is open
-  document.body.style.overflow = opening ? 'hidden' : '';
-  if (opening) _syncMobileDrawerNav();
+  if (opening) {
+    _syncMobileDrawerNav();  // rebuild first so nav is fresh
+    d.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  } else {
+    _closeMobileDrawer();
+  }
+}
+
+function _closeMobileDrawer() {
+  document.body.style.overflow = '';
+  const d = document.getElementById('mobileDrawer');
+  if (d) d.classList.remove('open');
+}
+
+function _mobileNavItem(label, viewId, color, extraClass) {
+  const el = document.createElement('div');
+  el.className = 'nav-item' + (extraClass ? ' ' + extraClass : '');
+  el.dataset.view = viewId;
+  el.innerHTML = `<span class="nav-dot" style="background:${color||'var(--text3)'}"></span>
+    <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${label}</span>`;
+  el.addEventListener('click', () => {
+    const navEl = document.querySelector(`[data-view="${viewId}"]`);
+    showView(viewId, navEl || el);
+    _closeMobileDrawer();
+  });
+  return el;
 }
 
 function _syncMobileDrawerNav() {
   const target = document.getElementById('mobileDrawerNav');
   if (!target) return;
-
-  // Clone sidebar nav groups
-  const groups = document.querySelectorAll('aside .nav-group');
   target.innerHTML = '';
-  groups.forEach(g => {
-    const clone = g.cloneNode(true);
-    // Ensure nav labels show
-    clone.querySelectorAll('.nav-label').forEach(l => l.style.display = '');
-    // Hide action buttons that don't work well in drawer
-    clone.querySelectorAll('.nav-item-actions').forEach(a => a.remove());
-    // Close drawer on nav click
-    clone.querySelectorAll('.nav-item, .nav-sub-item').forEach(item => {
-      item.addEventListener('click', () => {
-        document.body.style.overflow = '';
-        document.getElementById('mobileDrawer').classList.remove('open');
-      });
-    });
-    target.appendChild(clone);
-  });
 
-  // Sync user badge
+  // ── General ──
+  const g1 = document.createElement('div');
+  g1.className = 'nav-group';
+  g1.innerHTML = '<div class="nav-label">General</div>';
+  g1.appendChild(_mobileNavItem('Vista General', 'resumen', 'var(--gold)'));
+  g1.appendChild(_mobileNavItem('Comparativa', 'comparativa', 'var(--purple)'));
+  target.appendChild(g1);
+
+  // ── Mis Negocios ──
+  if (S.businesses && S.businesses.length) {
+    const g2 = document.createElement('div');
+    g2.className = 'nav-group';
+    g2.innerHTML = '<div class="nav-label">Mis Negocios</div>';
+    S.businesses.forEach(biz => {
+      const item = _mobileNavItem(biz.name, 'biz_' + biz.id, biz.color, biz.hidden ? 'biz-hidden' : '');
+      g2.appendChild(item);
+    });
+    target.appendChild(g2);
+  }
+
+  // ── Clientes ──
+  const g3 = document.createElement('div');
+  g3.className = 'nav-group';
+  g3.innerHTML = '<div class="nav-label">Clientes</div>';
+  g3.appendChild(_mobileNavItem('Todos los Clientes', 'clientes', 'var(--blue)'));
+  if (S.clients && S.clients.length) {
+    S.clients.slice(0, 8).forEach(cl => {
+      const biz = S.businesses.find(b => (cl.bizIds||[cl.bizId]).includes(b.id));
+      const color = biz ? biz.color : 'var(--text3)';
+      const item = _mobileNavItem(cl.name, 'client_detail', color, 'nav-sub-item');
+      item.addEventListener('click', e => {
+        e.stopPropagation();
+        openClientDetail(cl.id);
+        _closeMobileDrawer();
+      }, true);
+      // Override the default listener added by _mobileNavItem
+      g3.appendChild(item);
+    });
+  }
+  target.appendChild(g3);
+
+  // ── Configuración ──
+  const g4 = document.createElement('div');
+  g4.className = 'nav-group';
+  g4.innerHTML = '<div class="nav-label">Configuración</div>';
+  g4.appendChild(_mobileNavItem('Tipos de Operación', 'config_optypes', 'var(--text3)'));
+  target.appendChild(g4);
+
+  // Sync badges
   const badge = document.getElementById('userBadge');
   const mobileBadge = document.getElementById('mobileUserBadge');
   if (badge && mobileBadge) mobileBadge.textContent = badge.textContent;
 
-  // Sync month label
   const ml = document.getElementById('monthLabel');
   const mlm = document.getElementById('monthLabelMobile');
   if (ml && mlm) mlm.textContent = ml.textContent;
 }
 
 function _checkMobileBtn() {
-  // FAB visibility handled by CSS media query
+  // Rebuild mpicker when crossing 768px breakpoint
+  buildMpicker();
 }
 
 async function init(){
