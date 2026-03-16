@@ -438,89 +438,304 @@ td{padding:10px 12px;font-size:12px;vertical-align:middle;}
 .month-all-btn:hover{color:var(--gold);}
 .month-all-btn.dim{opacity:.5;}
 /* ════════════════════════════════════════
-   MOBILE  (≤768px)
+   MOBILE FAB + DRAWER
 ════════════════════════════════════════ */
 
-/* Botón hamburguesa — solo visible en mobile */
 #mobileMenuBtn{
   display:none;
-  position:fixed;bottom:24px;right:20px;z-index:300;
-  width:52px;height:52px;border-radius:50%;
+  position:fixed;bottom:22px;right:18px;z-index:300;
+  width:50px;height:50px;border-radius:50%;
   background:var(--gold);border:none;cursor:pointer;
-  color:#0c0e11;font-size:22px;
-  box-shadow:0 4px 20px rgba(0,0,0,.4);
+  box-shadow:0 4px 20px rgba(0,0,0,.5);
   align-items:center;justify-content:center;
-  transition:transform .15s, box-shadow .15s;
+  transition:transform .15s, opacity .15s;
 }
-#mobileMenuBtn:active{ transform:scale(.93); }
+#mobileMenuBtn::before,
+#mobileMenuBtn::after{
+  content:'';position:absolute;
+  width:18px;height:2px;background:#0c0e11;border-radius:2px;
+  transition:transform .2s;
+}
+#mobileMenuBtn::before{ box-shadow:0 -5px 0 #0c0e11, 0 5px 0 #0c0e11; }
+#mobileMenuBtn::after{ display:none; }
+#mobileMenuBtn:active{ transform:scale(.9); opacity:.85; }
 
-/* Drawer lateral — oculto en desktop */
 #mobileDrawer{ display:none; }
 
+/* ════════════════════════════════════════
+   MOBILE  ≤768px
+════════════════════════════════════════ */
 @media(max-width:768px){
-  /* Sidebar completamente oculto — reemplazado por el drawer */
-  aside{ display:none !important; }
 
-  /* Botón flotante visible */
+  /* ─── base ─────────────────────────── */
+  aside{ display:none !important; }
   #mobileMenuBtn{ display:flex; }
 
-  /* Drawer */
   #mobileDrawer{
-    display:block;
-    position:fixed;inset:0;z-index:500;
-    pointer-events:none;
+    display:block;position:fixed;inset:0;z-index:500;pointer-events:none;
   }
   #mobileDrawer.open{ pointer-events:all; }
   #mobileDrawerOverlay{
     position:absolute;inset:0;
-    background:rgba(0,0,0,.6);
-    opacity:0;transition:opacity .25s;
-    pointer-events:none;
+    background:rgba(0,0,0,.7);
+    opacity:0;transition:opacity .25s;pointer-events:none;
   }
-  #mobileDrawer.open #mobileDrawerOverlay{
-    opacity:1;pointer-events:all;
-  }
+  #mobileDrawer.open #mobileDrawerOverlay{ opacity:1;pointer-events:all; }
   #mobileDrawerPanel{
-    position:absolute;left:0;top:0;bottom:0;width:290px;
+    position:absolute;left:0;top:0;bottom:0;width:80vw;max-width:288px;
     background:var(--s1);border-right:1px solid var(--border2);
-    overflow-y:auto;
-    display:flex;flex-direction:column;
-    transform:translateX(-100%);
-    transition:transform .25s cubic-bezier(.4,0,.2,1);
+    overflow-y:auto;display:flex;flex-direction:column;
+    transform:translateX(-108%);
+    transition:transform .28s cubic-bezier(.4,0,.2,1);
+    box-shadow:8px 0 48px rgba(0,0,0,.6);
   }
-  #mobileDrawer.open #mobileDrawerPanel{
-    transform:translateX(0);
+  #mobileDrawer.open #mobileDrawerPanel{ transform:translateX(0); }
+
+  #mobileDrawerNav .nav-group{ padding:10px 0 0; }
+  #mobileDrawerNav .nav-label{
+    font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;
+    color:var(--text3);padding:0 14px 4px;
   }
-
-  /* Main */
-  main{ padding:12px 10px; }
-
-  /* Stats */
-  .stats{ grid-template-columns:1fr 1fr; }
-  .charts-row{ grid-template-columns:1fr; }
-
-  /* Page header */
-  .ph{ flex-direction:column;gap:10px;align-items:flex-start; }
-  .ph-right{ flex-wrap:wrap;gap:6px;width:100%; }
-  .ph-right .sel,.ph-right .btn,.ph-right .btn-ghost,.ph-right .btn-outline{
-    font-size:11px;padding:6px 10px;
+  #mobileDrawerNav .nav-item{
+    padding:10px 14px;font-size:12px;
+    border-left:2px solid transparent;
+  }
+  #mobileDrawerNav .nav-item.active{
+    background:var(--s2);color:var(--text);border-left-color:var(--gold);
   }
 
-  /* Tables */
-  .card{ overflow-x:auto; }
-  table{ min-width:480px; }
+  /* ─── main layout ───────────────────── */
+  main{ padding:0 0 80px; }
 
-  /* Misc */
-  .biz-mpicker{ flex-wrap:wrap;padding:8px 10px; }
-  .cmp-nav{ flex-wrap:wrap; }
-  .modal-box{ width:95vw;max-height:92vh;margin:4vh auto; }
-  .mpicker-bar{ padding:10px 12px; }
+  /* ─── page header: compact sticky ───── */
+  .ph{
+    flex-direction:row;align-items:center;
+    justify-content:space-between;
+    gap:8px;flex-wrap:nowrap;
+    margin-bottom:0;
+    padding:10px 14px;
+    background:var(--s1);
+    border-bottom:1px solid var(--border);
+    position:sticky;top:0;z-index:100;
+    min-height:0;
+  }
+  .ph > div:first-child{ min-width:0;flex:1; }
+  .ph h1{
+    font-size:16px;font-weight:800;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  .ph p{ display:none; } /* hide subtitle on mobile */
+  .ph-right{
+    display:flex;align-items:center;gap:5px;
+    flex-shrink:0;flex-wrap:nowrap;
+  }
+  .ph-right .sel{
+    font-size:10px;padding:4px 6px;max-width:100px;
+  }
+  .ph-right .btn,.ph-right .btn-outline,.ph-right .btn-ghost{
+    font-size:10px;padding:5px 9px;white-space:nowrap;
+  }
+
+  /* ─── section padding ───────────────── */
+  .view.active > *{ padding-left:0;padding-right:0; }
+  .view.active > .stats,
+  .view.active > .charts-row,
+  .view.active > .biz-grid,
+  .view.active > #resBizCards,
+  .view.active > #resCharts,
+  .view.active > #resYearCard,
+  .view.active > #resBarCard,
+  .view.active > .client-grid,
+  .view.active > .cmp-selectors,
+  .view.active > .cmp-nav,
+  .view.active > #cmpPeriodTabs,
+  .view.active > #cmpTabContent{
+    padding-left:12px;padding-right:12px;
+  }
+
+  /* ─── period picker ─────────────────── */
+  .mpicker-bar{
+    padding:8px 14px;
+    border-radius:0;border-left:none;border-right:none;
+    margin-bottom:8px;gap:6px;
+  }
+  .mpicker-label{ font-size:8px;letter-spacing:1px; }
+  .mchip{ padding:3px 8px;font-size:10px; }
+  .mpick-btn{ padding:3px 7px;font-size:9px; }
+  .mchip-year{
+    font-size:9px;padding:3px 8px;
+  }
+  .mpicker-actions{ gap:3px; }
+
+  /* ─── stats: compact 2-col ──────────── */
+  .stats{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:6px;
+    margin-bottom:10px;
+  }
+  .stat{
+    padding:11px 12px;
+    border-radius:12px;
+  }
+  .stat::after{ height:2px; }
+  .stat-lbl{
+    font-size:8px;letter-spacing:.8px;
+    margin-bottom:3px;
+  }
+  .stat-val{
+    font-size:15px; /* much smaller than desktop 20px */
+    line-height:1.1;
+  }
+  .stat-sub{ font-size:9px;margin-top:2px; }
+  .drag-handle{ display:none; } /* no drag on mobile */
+
+  /* ─── donut charts ──────────────────── */
+  .charts-row{
+    grid-template-columns:1fr 1fr;
+    gap:6px;margin-bottom:10px;
+  }
+  .donut-card{ padding:12px 10px;border-radius:12px; }
+  .donut-title{ font-size:9px;margin-bottom:8px; }
+  .donut-wrap{ width:80px;height:80px;margin-bottom:8px; }
+  .donut-center .dv{ font-size:10px; }
+  .donut-center .dl{ font-size:8px; }
+  .dl-item{ font-size:9px; }
+
+  /* ─── biz overview cards ────────────── */
+  .biz-grid{
+    grid-template-columns:1fr 1fr;
+    gap:6px;margin-bottom:10px;
+  }
+  .biz-card{ padding:12px;border-radius:12px; }
+  .bc-name{ font-size:12px;margin-bottom:1px; }
+  .bc-type{ font-size:9px;margin-bottom:8px; }
+  .bc-row{ font-size:10px;margin-bottom:3px; }
+
+  /* ─── cards ─────────────────────────── */
+  .card{
+    border-radius:0;
+    border-left:none;border-right:none;
+    margin-bottom:8px;
+  }
+  .card-head{ padding:9px 14px;gap:5px; }
+  .card-title{ font-size:12px; }
+  .card-head .sel{ font-size:10px;padding:3px 6px; }
+
+  /* ─── tables ────────────────────────── */
+  .card > table,
+  .card > div > table{
+    display:block;
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+    min-width:0;
+  }
+  table{ min-width:460px; }
+  td{ padding:8px 10px;font-size:11px; }
+  thead th{ padding:6px 10px;font-size:8px; }
+
+  /* ─── biz mpicker ───────────────────── */
+  .biz-mpicker{
+    flex-wrap:wrap;padding:7px 12px;gap:5px;
+  }
+  .bmchip{ padding:3px 7px;font-size:9px; }
+  .bmpick-btn{ font-size:8px;padding:2px 6px; }
+
+  /* ─── comparativa ───────────────────── */
+  .cmp-nav{
+    display:flex;flex-wrap:nowrap;
+    overflow-x:auto;gap:2px;
+    scrollbar-width:none;
+  }
+  .cmp-nav::-webkit-scrollbar{ display:none; }
+  .cmp-nav-btn{ font-size:11px;padding:6px 14px;white-space:nowrap;flex-shrink:0; }
   .cmp-grid{ grid-template-columns:1fr; }
-  .client-grid{ grid-template-columns:1fr; }
-  .year-totals{ flex-wrap:wrap;gap:8px; }
-  .year-biz-grid{ grid-template-columns:1fr; }
-}
+  .cmp-selectors{ gap:5px;flex-wrap:wrap; }
+  .cmp-card{ padding:12px; }
+  .cmp-name{ font-size:12px; }
+  .cmp-metric{ font-size:10px; }
 
+  /* ─── clients ───────────────────────── */
+  .client-grid{ grid-template-columns:1fr;gap:6px; }
+  .client-card{ padding:13px;border-radius:12px; }
+  .client-name{ font-size:13px; }
+  .client-stats{ grid-template-columns:repeat(3,1fr); }
+  .cstat-val{ font-size:11px; }
+  .client-filter-bar{
+    padding:8px 14px;
+    background:var(--s2);
+    border-bottom:1px solid var(--border);
+    display:flex;flex-wrap:wrap;gap:5px;align-items:center;
+  }
+
+  /* ─── year card ─────────────────────── */
+  .year-totals{
+    display:grid;grid-template-columns:1fr 1fr;
+  }
+  .year-total-item{
+    padding:9px 12px;
+    border-right:1px solid var(--border);
+    border-bottom:1px solid var(--border);
+  }
+  .year-total-item:nth-child(2n){ border-right:none; }
+  .year-total-lbl{ font-size:8px; }
+  .year-total-val{ font-size:12px; }
+  .year-biz-grid{ grid-template-columns:1fr 1fr;gap:5px;padding:10px 14px; }
+  .year-biz-item{ padding:8px 10px; }
+  .year-biz-name{ font-size:10px; }
+  .year-biz-row{ font-size:9px; }
+
+  /* ─── modals: bottom sheet ──────────── */
+  .overlay{ align-items:flex-end; }
+  .modal{
+    width:100%;max-width:100%;
+    border-radius:18px 18px 0 0;
+    max-height:90vh;
+    padding:6px 16px 30px;
+    border-bottom:none;
+  }
+  .modal::before{
+    content:'';display:block;
+    width:32px;height:3px;border-radius:2px;
+    background:var(--border2);
+    margin:8px auto 14px;
+  }
+  .modal h2{ font-size:16px;margin-bottom:14px; }
+  .fg-row{ grid-template-columns:1fr; }
+  .modal-actions{ flex-wrap:wrap; }
+  .modal-actions .btn,
+  .modal-actions .btn-ghost{ flex:1;text-align:center; }
+
+  /* ─── login: bottom sheet ───────────── */
+  #loginScreen{
+    align-items:flex-end;
+    background:rgba(0,0,0,.65);
+    backdrop-filter:blur(3px);
+  }
+  .login-card{
+    width:100%;max-width:100%;
+    border-radius:20px 20px 0 0;
+    padding:8px 20px 32px;
+    border-bottom:none;
+    border-left:none;border-right:none;
+  }
+  .login-card::before{
+    content:'';display:block;
+    width:32px;height:3px;border-radius:2px;
+    background:var(--border2);
+    margin:8px auto 16px;
+  }
+  .login-input{ padding:12px 13px;font-size:14px; }
+  .login-btn{ padding:13px;font-size:13px; }
+
+  /* ─── biz view period filter ────────── */
+  #bizPeriodPills_*{ gap:4px; }
+  .biz-mpicker-actions{ gap:2px; }
+
+  /* ─── toolbar ───────────────────────── */
+  .toolbar{ padding:8px 12px;gap:5px; }
+
+}
 /* ── Month multi-picker ── */
 .mpicker-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:18px;padding:14px 16px;background:var(--s1);border:1px solid var(--border);border-radius:12px;}
 .mpicker-label{font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);flex-shrink:0;white-space:nowrap;}
@@ -1386,29 +1601,41 @@ td{padding:10px 12px;font-size:12px;vertical-align:middle;}
 <div id="mobileDrawer">
   <div id="mobileDrawerOverlay" onclick="toggleMobileDrawer()"></div>
   <div id="mobileDrawerPanel">
-    <div style="padding:12px 16px 8px;display:flex;align-items:center;justify-content:space-between;">
-      <span style="font-family:'Syne',sans-serif;font-weight:800;font-size:16px;">Operaciones</span>
-      <button onclick="toggleMobileDrawer()" style="background:transparent;border:none;color:var(--text2);font-size:20px;cursor:pointer;padding:0 4px;">✕</button>
-    </div>
-    <!-- Nav groups cloned for drawer -->
-    <div id="mobileDrawerNav" style="flex:1;overflow-y:auto;"></div>
-    <!-- Footer actions -->
-    <div style="padding:12px 14px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:8px;margin-top:8px;">
-      <div id="mobileUserBadge" style="font-size:10px;color:var(--text3);font-family:'IBM Plex Mono',monospace;"></div>
-      <div class="theme-toggle" style="gap:8px;">
-        <span style="font-size:11px;color:var(--text2);">☀ Tema</span>
-        <div class="toggle-track" onclick="toggleTheme()"><div class="toggle-knob"></div></div>
+
+    <!-- Header -->
+    <div style="padding:20px 18px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+      <div>
+        <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:17px;color:var(--gold);line-height:1;">Operaciones</div>
+        <div id="mobileUserBadge" style="font-size:10px;color:var(--text3);font-family:'IBM Plex Mono',monospace;margin-top:3px;"></div>
       </div>
-      <div class="month-selector" style="justify-content:flex-start;gap:8px;">
+      <button onclick="toggleMobileDrawer()" style="width:32px;height:32px;background:var(--s2);border:1px solid var(--border);border-radius:50%;color:var(--text2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">✕</button>
+    </div>
+
+    <!-- Nav (dynamically populated) -->
+    <div id="mobileDrawerNav" style="flex:1;overflow-y:auto;padding-bottom:8px;"></div>
+
+    <!-- Month selector -->
+    <div style="padding:10px 16px;border-top:1px solid var(--border);border-bottom:1px solid var(--border);">
+      <div style="font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);margin-bottom:6px;">Período activo</div>
+      <div style="display:flex;align-items:center;gap:8px;">
         <button class="month-btn" onclick="changeMonth(-1)">‹</button>
-        <span class="month-selector-label" id="monthLabelMobile" style="font-size:11px;"></span>
+        <span class="month-selector-label" id="monthLabelMobile" style="font-size:12px;flex:1;text-align:center;"></span>
         <button class="month-btn" onclick="changeMonth(1)">›</button>
       </div>
-      <button class="month-all-btn" onclick="setAllMonths()" style="font-size:11px;">Ver todos los meses</button>
-      <button class="add-biz-btn" onclick="openAddBiz();toggleMobileDrawer();" style="font-size:11px;">＋ Nuevo negocio</button>
-      <button class="add-biz-btn" onclick="exportarDatos()" style="font-size:11px;text-align:left;">↓ Copia de seguridad</button>
-      <button class="logout-btn" onclick="window.DB.dbLogout()" style="font-size:11px;">⏻ Cerrar sesión</button>
+      <button class="month-all-btn" onclick="setAllMonths();_syncMobileDrawerNav();" style="margin-top:4px;">Ver todos los meses</button>
     </div>
+
+    <!-- Footer actions -->
+    <div style="padding:14px 16px;display:flex;flex-direction:column;gap:8px;flex-shrink:0;">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <span style="font-size:11px;color:var(--text2);">Tema oscuro</span>
+        <div class="toggle-track" onclick="toggleTheme()"><div class="toggle-knob"></div></div>
+      </div>
+      <button class="add-biz-btn" onclick="openAddBiz();toggleMobileDrawer();" style="padding:9px 12px;text-align:center;font-size:12px;">＋ Nuevo negocio</button>
+      <button class="add-biz-btn" onclick="exportarDatos()" style="padding:9px 12px;text-align:left;font-size:12px;">↓ Copia de seguridad</button>
+      <button class="logout-btn" onclick="window.DB.dbLogout()" style="padding:9px 12px;font-size:12px;text-align:left;">⏻ Cerrar sesión</button>
+    </div>
+
   </div>
 </div>
 
@@ -1416,6 +1643,15 @@ td{padding:10px 12px;font-size:12px;vertical-align:middle;}
 <script src="app.js"></script>
 <script>
   // Boot — scripts at end of body, DOM already ready
+  // Safety: if db.js failed to load, define a no-op DB to prevent crash
+  if (typeof window.DB === 'undefined') {
+    console.error('db.js did not load — running without sync');
+    window.DB = {
+      dbInit: ()=>{}, scheduleSync: ()=>{}, dbLoad: async()=>null,
+      dbLogin: async()=>null, dbSignUp: async()=>({}), dbLogout: ()=>location.reload(),
+      getSession: ()=>null, setSyncStatus: ()=>{}, diagnose: ()=>{}
+    };
+  }
   window.DB.dbInit();
   init();
 
